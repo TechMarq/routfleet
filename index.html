@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RouteFleet | Geolocalização de Passageiros</title>
+  
+  <!-- SEO & Meta Tags -->
+  <meta name="description" content="Dashboard interativo para geolocalização e visualização de rotas e listas de passageiros a partir de arquivos CSV.">
+  <meta name="author" content="RouteFleet">
+  
+  <!-- Google Fonts - Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom CSSheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+  <div class="app-container">
+    
+    <!-- Sidebar Panel -->
+    <aside class="sidebar" id="sidebar">
+      
+      <!-- Brand Header -->
+      <header class="brand-header">
+        <div class="logo-container">
+          <i data-lucide="navigation" class="logo-icon"></i>
+          <h1 class="brand-title">Route<span>Fleet</span></h1>
+        </div>
+        <p class="brand-subtitle">Geocodificador de Passageiros</p>
+      </header>
+
+      <!-- Import Section -->
+      <section class="control-section">
+        <h2 class="section-title">Carregar Dados</h2>
+        
+        <!-- Drag & Drop Zone -->
+        <div class="upload-dropzone" id="dropzone">
+          <input type="file" id="csv-file-input" accept=".csv, .xlsx, .xls" class="hidden-file-input">
+          <i data-lucide="file-up" class="upload-icon"></i>
+          <p class="upload-text">Arraste sua planilha Excel ou CSV aqui ou <span class="highlight">clique para buscar</span></p>
+          <p class="upload-hint">Modelo: <code>Nome Passageiro</code>, <code>endereco origem</code>, etc. ou simples</p>
+        </div>
+
+        <!-- Sample Helper -->
+        <button id="btn-download-sample" class="btn btn-secondary btn-sm full-width mt-2">
+          <i data-lucide="download" class="btn-icon"></i>
+          Baixar Modelo Excel
+        </button>
+
+        <!-- Clear Geocoding Cache -->
+        <button id="btn-clear-cache" class="btn btn-secondary btn-sm full-width mt-2" title="Limpa o cache local de geocodificação para forçar novas buscas">
+          <i data-lucide="database-zap" class="btn-icon"></i>
+          Limpar Cache de Endereços
+        </button>
+      </section>
+
+      <!-- Geocoding Progress Section -->
+      <section class="progress-section hidden" id="progress-container">
+        <div class="progress-info">
+          <span class="progress-status" id="progress-text">Processando...</span>
+          <span class="progress-percentage" id="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+        </div>
+        <div class="queue-controls mt-2">
+          <span class="rate-limit-badge">
+            <i data-lucide="shield-alert" class="badge-icon"></i> Throttled OSM API (1.2s)
+          </span>
+          <button id="btn-cancel-geocoding" class="btn btn-danger btn-xs">
+            Cancelar
+          </button>
+        </div>
+      </section>
+
+      <!-- Passengers List Area -->
+      <section class="passengers-section">
+        <div class="section-header-row">
+          <h2 class="section-title">Passageiros (<span id="count-total">0</span>)</h2>
+          <span class="stats-badge" id="stats-badge">0 / 0 Mapeados</span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-container mt-2">
+          <i data-lucide="search" class="search-icon"></i>
+          <input type="text" id="search-input" placeholder="Filtrar por nome ou endereço..." disabled>
+        </div>
+
+        <!-- Status Filter Pills -->
+        <div class="filter-group disabled" id="filter-group">
+          <button class="filter-btn active" data-filter="all">Todos</button>
+          <button class="filter-btn" data-filter="success">Encontrados</button>
+          <button class="filter-btn" data-filter="partial">Parciais</button>
+          <button class="filter-btn" data-filter="error">Erros</button>
+        </div>
+
+        <!-- Scrollable list -->
+        <div class="passengers-list" id="passengers-list">
+          <!-- Empty State -->
+          <div class="empty-state" id="empty-state">
+            <i data-lucide="users" class="empty-icon"></i>
+            <p>Nenhum passageiro carregado ainda.</p>
+            <span class="empty-sub">Importe um arquivo CSV para começar a geolocalização.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar Footer -->
+      <footer class="sidebar-footer">
+        <p>Dados de mapas © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a></p>
+        <p>Serviço de busca por <a href="https://nominatim.org/" target="_blank">Nominatim</a></p>
+      </footer>
+    </aside>
+
+    <!-- Map Container -->
+    <main class="map-viewport">
+      <div id="map"></div>
+
+      <!-- Map Action Overlays -->
+      <div class="map-controls-overlay">
+        <!-- Theme Toggle -->
+        <button id="btn-toggle-theme" class="overlay-btn" title="Alternar Tema Claro/Escuro">
+          <i data-lucide="sun" id="theme-icon-light" class="hidden"></i>
+          <i data-lucide="moon" id="theme-icon-dark"></i>
+        </button>
+        
+        <!-- Recenter Map -->
+        <button id="btn-recenter" class="overlay-btn" title="Recentralizar no Brasil" disabled>
+          <i data-lucide="maximize-2"></i>
+        </button>
+
+        <!-- Clear Data -->
+        <button id="btn-clear" class="overlay-btn btn-danger-hover" title="Limpar todos os dados" disabled>
+          <i data-lucide="trash-2"></i>
+        </button>
+      </div>
+
+      <!-- Custom Toast notification box -->
+      <div class="toast-container" id="toast-container"></div>
+    </main>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- SheetJS for Excel (.xlsx, .xls) parsing and writing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- PapaParse for CSV parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="sha512-dfX5uYVXzyU8+KHDKVx8LVq9NS1gRX5hy1FhingbTuBfZOThOIurWZ1Dm659G50c11acVd7YDU567jW5uV5vWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  
+  <!-- Lucide Icons for modern UI icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Core Script -->
+  <script src="script.js"></script>
+</body>
+</html>
