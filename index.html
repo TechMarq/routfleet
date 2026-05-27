@@ -43,21 +43,27 @@
         <div class="upload-dropzone" id="dropzone">
           <input type="file" id="csv-file-input" accept=".csv, .xlsx, .xls" class="hidden-file-input">
           <i data-lucide="file-up" class="upload-icon"></i>
-          <p class="upload-text">Arraste sua planilha Excel ou CSV aqui ou <span class="highlight">clique para buscar</span></p>
-          <p class="upload-hint">Modelo: <code>Nome Passageiro</code>, <code>endereco origem</code>, etc. ou simples</p>
+          <div class="upload-dropzone-text-group">
+            <p class="upload-text">Arraste ou <span class="highlight">clique para buscar</span></p>
+            <p class="upload-hint">Modelo: <code>Nome Passageiro</code>, <code>endereco origem</code></p>
+          </div>
         </div>
 
-        <!-- Sample Helper -->
-        <button id="btn-download-sample" class="btn btn-secondary btn-sm full-width mt-2">
-          <i data-lucide="download" class="btn-icon"></i>
-          Baixar Modelo Excel
-        </button>
-
-        <!-- Clear Geocoding Cache -->
-        <button id="btn-clear-cache" class="btn btn-secondary btn-sm full-width mt-2" title="Limpa o cache local de geocodificação para forçar novas buscas">
-          <i data-lucide="database-zap" class="btn-icon"></i>
-          Limpar Cache de Endereços
-        </button>
+        <!-- Tool Buttons Row -->
+        <div class="tool-buttons-row mt-2" style="display: flex; gap: 6px;">
+          <button id="btn-download-sample" class="btn btn-secondary btn-sm" style="flex: 1; padding: 6px 4px; font-size: 10px;" title="Baixar Modelo Excel">
+            <i data-lucide="download" class="btn-icon"></i>
+            Modelo
+          </button>
+          <button id="btn-clear-cache" class="btn btn-secondary btn-sm" style="flex: 1; padding: 6px 4px; font-size: 10px;" title="Limpa o cache local de geocodificação para forçar novas buscas">
+            <i data-lucide="database-zap" class="btn-icon"></i>
+            Limpar Cache
+          </button>
+          <button id="btn-clear-all-sidebar" class="btn btn-danger btn-sm" style="flex: 1; padding: 6px 4px; font-size: 10px;" title="Zera todo o mapeamento e rotas com confirmação por código">
+            <i data-lucide="trash-2" class="btn-icon"></i>
+            Zerar Tudo
+          </button>
+        </div>
       </section>
 
       <!-- Geocoding Progress Section -->
@@ -86,27 +92,56 @@
           <span class="stats-badge" id="stats-badge">0 / 0 Mapeados</span>
         </div>
 
-        <!-- Search Bar -->
-        <div class="search-container mt-2">
-          <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="search-input" placeholder="Filtrar por nome ou endereço..." disabled>
+        <button id="btn-optimize-routes" class="btn btn-accent btn-optimize-routes full-width mt-2 disabled" title="Agrupa passageiros geocodificados em veículos otimizando as rotas">
+          <i data-lucide="route" class="btn-icon"></i>
+          Gerar Logística de Rotas
+        </button>
+
+        <!-- Sidebar Tabs -->
+        <div class="sidebar-tabs" id="sidebar-tabs">
+          <button class="tab-btn active" data-tab="passengers">
+            <i data-lucide="users"></i> Passageiros
+          </button>
+          <button class="tab-btn" data-tab="vehicles" id="btn-tab-vehicles" disabled>
+            <i data-lucide="truck"></i> Veículos
+          </button>
         </div>
 
-        <!-- Status Filter Pills -->
-        <div class="filter-group disabled" id="filter-group">
-          <button class="filter-btn active" data-filter="all">Todos</button>
-          <button class="filter-btn" data-filter="success">Encontrados</button>
-          <button class="filter-btn" data-filter="partial">Parciais</button>
-          <button class="filter-btn" data-filter="error">Erros</button>
+        <!-- Passengers Tab Content -->
+        <div id="passengers-tab-content" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <!-- Search Bar -->
+          <div class="search-container mt-2">
+            <i data-lucide="search" class="search-icon"></i>
+            <input type="text" id="search-input" placeholder="Filtrar por nome ou endereço..." disabled>
+          </div>
+
+          <!-- Status Filter Pills -->
+          <div class="filter-group disabled" id="filter-group">
+            <button class="filter-btn active" data-filter="all">Todos</button>
+            <button class="filter-btn" data-filter="success">Encontrados</button>
+            <button class="filter-btn" data-filter="partial">Parciais</button>
+            <button class="filter-btn" data-filter="error">Erros</button>
+          </div>
+
+          <!-- Scrollable list -->
+          <div class="passengers-list" id="passengers-list">
+            <!-- Empty State -->
+            <div class="empty-state" id="empty-state">
+              <i data-lucide="users" class="empty-icon"></i>
+              <p>Nenhum passageiro carregado ainda.</p>
+              <span class="empty-sub">Importe um arquivo CSV para começar a geolocalização.</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Scrollable list -->
-        <div class="passengers-list" id="passengers-list">
-          <!-- Empty State -->
-          <div class="empty-state" id="empty-state">
-            <i data-lucide="users" class="empty-icon"></i>
-            <p>Nenhum passageiro carregado ainda.</p>
-            <span class="empty-sub">Importe um arquivo CSV para começar a geolocalização.</span>
+        <!-- Vehicles Tab Content -->
+        <div id="vehicles-tab-content" class="hidden" style="flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+          <div class="vehicles-list" id="vehicles-list">
+            <div class="empty-state">
+              <i data-lucide="route" class="empty-icon"></i>
+              <p>Logística não gerada.</p>
+              <span class="empty-sub">Clique em "Gerar Logística de Rotas" para agrupar os passageiros em veículos.</span>
+            </div>
           </div>
         </div>
       </section>
@@ -145,6 +180,27 @@
       <div class="toast-container" id="toast-container"></div>
     </main>
 
+  </div>
+  <!-- Modern Reset Confirmation Modal -->
+  <div id="reset-confirm-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <i data-lucide="shield-alert" class="modal-header-icon"></i>
+        <h3 class="modal-title">Confirmar Reinicialização</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-description">Esta ação apagará permanentemente todos os passageiros geolocalizados, veículos e rotas ativas. Esta operação não poderá ser desfeita.</p>
+        <div class="code-display-container">
+          <span class="code-hint">Digite o código de 6 dígitos abaixo:</span>
+          <span id="reset-confirm-code" class="code-value">000000</span>
+        </div>
+        <input type="text" id="reset-code-input" maxlength="6" class="modal-input" placeholder="Digite o código..." autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-modal-cancel" class="btn btn-secondary btn-sm">Cancelar</button>
+        <button id="btn-modal-confirm" class="btn btn-danger btn-sm" disabled>Confirmar e Limpar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Leaflet JS -->

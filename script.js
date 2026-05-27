@@ -3,12 +3,58 @@
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Inject keyframe animation for custom pulsing markers
+  // Inject keyframe animation for custom pulsing markers + marker label styles
   const style = document.createElement('style');
   style.textContent = `
     @keyframes markerPulse {
       0% { transform: scale(1); opacity: 0.8; }
       100% { transform: scale(2.2); opacity: 0; }
+    }
+    .marker-label {
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1.35;
+      white-space: nowrap;
+      padding: 3px 6px;
+      border-radius: 4px;
+      pointer-events: none;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .marker-label-sub {
+      display: block;
+      font-size: 8px;
+      font-weight: 500;
+      opacity: 0.75;
+      margin-top: 1px;
+    }
+    .marker-label::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+      border-top-color: rgba(15, 23, 42, 0.82);
+    }
+    body.light-theme .marker-label {
+      background: rgba(255, 255, 255, 0.92);
+      color: #0f172a;
+      border-color: rgba(0,0,0,0.08);
+    }
+    body.light-theme .marker-label::after {
+      border-top-color: rgba(255, 255, 255, 0.92);
+    }
+    .custom-map-marker {
+      overflow: visible !important;
     }
   `;
   document.head.appendChild(style);
@@ -23,7 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
     cancelRequested: false, // Queue cancel flag
     theme: 'dark',        // Active theme
     currentActiveId: null, // Active passenger ID
-    activeFilter: 'all'    // Active status filter ('all', 'success', 'partial', 'error')
+    activeFilter: 'all',   // Active status filter ('all', 'success', 'partial', 'error')
+    vehicles: [],         // Structured vehicle routes
+    activeTab: 'passengers', // Active tab ('passengers', 'vehicles')
+    vehicleRouteLayers: [] // Layer references for rendering VRP routes on map
   };
 
   // --------------------------------------------------------------------------
@@ -46,6 +95,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterGroup = document.getElementById('filter-group');
   const filterButtons = document.querySelectorAll('.filter-btn');
   
+  // VRP DOM elements
+  const btnOptimizeRoutes = document.getElementById('btn-optimize-routes');
+  const btnTabVehicles = document.getElementById('btn-tab-vehicles');
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const passengersTabContent = document.getElementById('passengers-tab-content');
+  const vehiclesTabContent = document.getElementById('vehicles-tab-content');
+  const vehiclesList = document.getElementById('vehicles-list');
+
   // Floating Map Overlays
   const btnToggleTheme = document.getElementById('btn-toggle-theme');
   const themeIconLight = document.getElementById('theme-icon-light');
@@ -53,6 +110,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRecenter = document.getElementById('btn-recenter');
   const btnClear = document.getElementById('btn-clear');
   const btnClearCache = document.getElementById('btn-clear-cache');
+  const btnClearAllSidebar = document.getElementById('btn-clear-all-sidebar');
+
+  // Confirmation Modal Elements
+  const resetConfirmModal = document.getElementById('reset-confirm-modal');
+  const resetConfirmCode = document.getElementById('reset-confirm-code');
+  const resetCodeInput = document.getElementById('reset-code-input');
+  const btnModalCancel = document.getElementById('btn-modal-cancel');
+  const btnModalConfirm = document.getElementById('btn-modal-confirm');
 
   // Cache Prefix
   const CACHE_PREFIX = 'routefleet_geocode_';
@@ -85,11 +150,16 @@ document.addEventListener('DOMContentLoaded', () => {
   tiles.dark.addTo(map);
 
   // Custom Icon Factory based on passenger status
-  function getCustomMarkerIcon(status) {
+  function getCustomMarkerIcon(status, labelData) {
     let color = 'var(--accent-color)'; // Default (pending/loading)
     if (status === 'success') color = 'var(--color-success)';
     if (status === 'cache') color = 'var(--color-info)';
     if (status === 'error') color = 'var(--color-danger)';
+
+    const labelHtml = labelData
+      ? `<div class="marker-label">${labelData.name}<span class="marker-label-sub">${labelData.sub}</span></div>`
+      : '';
+
 
     return L.divIcon({
       className: 'custom-map-marker',
@@ -107,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
           align-items: center;
           justify-content: center;
         ">
+          ${labelHtml}
           <div style="
             position: absolute;
             top: -2.5px;
@@ -128,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Custom Icon Factory for Origin/Destination route markers
-  function getRouteMarkerIcon(type, status) {
+  function getRouteMarkerIcon(type, status, labelData) {
     let color = 'var(--accent-color)'; // Default
     if (status === 'error') {
       color = 'var(--color-danger)';
@@ -137,6 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const label = type === 'origin' ? 'O' : 'D';
+
+    const labelHtml = labelData
+      ? `<div class="marker-label">${labelData.name}<span class="marker-label-sub">${labelData.sub}</span></div>`
+      : '';
     
     return L.divIcon({
       className: 'custom-map-marker',
@@ -158,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
           color: #ffffff;
         ">
           ${label}
+          ${labelHtml}
           <div style="
             position: absolute;
             top: -2px;
@@ -645,7 +721,8 @@ document.addEventListener('DOMContentLoaded', () => {
           status: 'pending',
           status_origin: 'pending',
           status_dest: 'pending',
-          source: null
+          source: null,
+          _rawRow: row  // store original row for export
         };
       } else {
         const address = row[simpleAddressCol]?.trim() || '';
@@ -657,7 +734,8 @@ document.addEventListener('DOMContentLoaded', () => {
           lat: null,
           lng: null,
           status: 'pending',
-          source: null
+          source: null,
+          _rawRow: row  // store original row for export
         };
       }
     }).filter(p => p.mode === 'route' ? (p.originAddress || p.destAddress) : p.address);
@@ -1040,6 +1118,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     fitMapBounds();
     updateStatsBadge();
+    
+    // Enable VRP button if there are successfully geocoded passengers
+    const successfulCount = state.passengers.filter(p => p.status === 'success' || p.status === 'cache').length;
+    if (successfulCount > 0) {
+      btnOptimizeRoutes.classList.remove('disabled');
+      btnOptimizeRoutes.disabled = false;
+    }
+    
     showToast('Processamento finalizado.', 'info');
   }
 
@@ -1057,10 +1143,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function addRouteToMap(passenger) {
     const layers = [];
 
+    // Build label: full name on first line, neighborhood - city on second line
+    function buildLabel(components, nameStr) {
+      const name = (nameStr || '').trim();
+      const neigh = (components && components.neigh) ? components.neigh.trim() : '';
+      const city  = (components && components.city)  ? components.city.trim()  : '';
+      const sub   = [neigh, city].filter(Boolean).join(' - ');
+      return { name, sub };
+    }
+
     // 1. Origin Marker
     if (passenger.lat_origin !== null && passenger.lng_origin !== null) {
+      const originLabel = buildLabel(passenger.orig, passenger.name);
       const markerOrigin = L.marker([passenger.lat_origin, passenger.lng_origin], {
-        icon: getRouteMarkerIcon('origin', passenger.status_origin)
+        icon: getRouteMarkerIcon('origin', passenger.status_origin, originLabel)
       });
 
       const popupContent = `
@@ -1086,8 +1182,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Destination Marker
     if (passenger.lat_dest !== null && passenger.lng_dest !== null) {
+      const destLabel = buildLabel(passenger.dest, passenger.name);
       const markerDest = L.marker([passenger.lat_dest, passenger.lng_dest], {
-        icon: getRouteMarkerIcon('dest', passenger.status_dest)
+        icon: getRouteMarkerIcon('dest', passenger.status_dest, destLabel)
       });
 
       const popupContent = `
@@ -1137,9 +1234,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function addMarkerToMap(passenger) {
     if (passenger.lat === null || passenger.lng === null) return;
 
+    // Build label: full name on top, city on second line
+    const name = (passenger.name || '').trim();
+    const addrParts = (passenger.address || '').split(',');
+    const cityPart = addrParts.length > 1 ? addrParts[addrParts.length - 1].trim() : '';
+    const labelData = { name, sub: cityPart };
+
     // Create marker
     const marker = L.marker([passenger.lat, passenger.lng], {
-      icon: getCustomMarkerIcon(passenger.status)
+      icon: getCustomMarkerIcon(passenger.status, labelData)
     });
 
     // Create custom popup content
@@ -1333,6 +1436,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     updateStatsBadge();
+    
+    // Enable/disable VRP buttons dynamically
+    const successfulCount = state.passengers.filter(p => p.status === 'success' || p.status === 'cache').length;
+    if (successfulCount > 0) {
+      btnOptimizeRoutes.classList.remove('disabled');
+      btnOptimizeRoutes.disabled = false;
+    } else {
+      btnOptimizeRoutes.classList.add('disabled');
+      btnOptimizeRoutes.disabled = true;
+      btnTabVehicles.disabled = true;
+      state.vehicles = [];
+      switchTab('passengers');
+    }
+
     applyFilters();
     
     // Pan and zoom map to show newly found location(s)
@@ -1660,6 +1777,20 @@ document.addEventListener('DOMContentLoaded', () => {
     btnRecenter.disabled = true;
     btnClear.disabled = true;
 
+    // Reset VRP controls
+    btnOptimizeRoutes.classList.add('disabled');
+    btnOptimizeRoutes.disabled = true;
+    btnTabVehicles.disabled = true;
+    
+    if (state.vehicleRouteLayers) {
+      state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
+      state.vehicleRouteLayers = [];
+    }
+    state.vehicles = [];
+
+    // Switch tab back to passengers
+    switchTab('passengers');
+
     // Reset counts
     countTotal.textContent = '0';
     updateStatsBadge();
@@ -1681,13 +1812,43 @@ document.addEventListener('DOMContentLoaded', () => {
     fitMapBounds();
   });
 
-  // Clear dashboard data trigger
-  btnClear.addEventListener('click', () => {
-    if (confirm('Tem certeza que deseja limpar todos os passageiros e marcadores carregados?')) {
+  // Confirmation Modal and Clean up actions
+  let currentResetCode = '';
+
+  function openResetModal() {
+    currentResetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    resetConfirmCode.textContent = currentResetCode;
+    resetCodeInput.value = '';
+    btnModalConfirm.disabled = true;
+    resetConfirmModal.classList.remove('hidden');
+    setTimeout(() => resetCodeInput.focus(), 150);
+  }
+
+  function closeResetModal() {
+    resetConfirmModal.classList.add('hidden');
+  }
+
+  resetCodeInput.addEventListener('input', () => {
+    const val = resetCodeInput.value.trim();
+    btnModalConfirm.disabled = (val !== currentResetCode);
+  });
+
+  btnModalCancel.addEventListener('click', closeResetModal);
+
+  btnModalConfirm.addEventListener('click', () => {
+    const val = resetCodeInput.value.trim();
+    if (val === currentResetCode) {
       clearAllData();
-      showToast('Dados limpos com sucesso.', 'info');
+      closeResetModal();
+      showToast('Todos os passageiros, veículos e rotas foram zerados!', 'info');
     }
   });
+
+  btnClear.addEventListener('click', openResetModal);
+
+  if (btnClearAllSidebar) {
+    btnClearAllSidebar.addEventListener('click', openResetModal);
+  }
 
   // Escape HTML string utility
   function escapeHTML(str) {
@@ -1873,6 +2034,917 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(`Cache limpo! ${count} endereço(s) removido(s). Reimporte o arquivo para re-geocodificar.`, 'info');
     } else {
       showToast('Nenhum dado em cache para limpar.', 'info');
+    }
+  });
+
+  // --------------------------------------------------------------------------
+  // 12. Vehicle Routing Optimization (VRP) & Tabs Logic
+  // --------------------------------------------------------------------------
+
+  // Haversine distance calculator between coordinates in km
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) return 0;
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  // Capacitated Vehicle Routing Problem (CVRP) greedy optimizer with Local Search refinement
+  function optimizeVehiclesLogistics() {
+    const activePassengers = state.passengers.filter(p => p.status === 'success' || p.status === 'cache');
+    if (activePassengers.length === 0) {
+      showToast('Nenhum passageiro geocodificado com sucesso para roteirizar.', 'error');
+      return;
+    }
+
+    // Determine mode dynamically based on shared origins vs shared destinations
+    let depot = null;
+    let isDropOff = true;
+
+    const uniqueOrigins = new Set(activePassengers.filter(p => p.lat_origin !== null && p.lng_origin !== null).map(p => `${p.lat_origin.toFixed(5)},${p.lng_origin.toFixed(5)}`));
+    const uniqueDests = new Set(activePassengers.filter(p => p.lat_dest !== null && p.lng_dest !== null).map(p => `${p.lat_dest.toFixed(5)},${p.lng_dest.toFixed(5)}`));
+
+    const firstSuccessful = activePassengers.find(p => p.lat_origin !== null && p.lng_origin !== null);
+    if (!firstSuccessful) {
+      showToast('Não foi possível identificar a coordenada comum.', 'error');
+      return;
+    }
+
+    if (uniqueOrigins.size === 1) {
+      // Retirada (Drop-off): All passengers share the same origin coordinates
+      depot = {
+        lat: firstSuccessful.lat_origin,
+        lng: firstSuccessful.lng_origin,
+        address: firstSuccessful.originAddress || 'FORVIA',
+        type: 'origin'
+      };
+      isDropOff = true;
+    } else if (uniqueDests.size === 1) {
+      // Colocada (Pick-up): All passengers share the same destination coordinates
+      const firstDest = activePassengers.find(p => p.lat_dest !== null && p.lng_dest !== null);
+      depot = {
+        lat: firstDest.lat_dest,
+        lng: firstDest.lng_dest,
+        address: firstDest.destAddress || 'FORVIA',
+        type: 'destination'
+      };
+      isDropOff = false;
+    } else {
+      // Fallback to origin depot
+      depot = {
+        lat: firstSuccessful.lat_origin,
+        lng: firstSuccessful.lng_origin,
+        address: firstSuccessful.originAddress || 'FORVIA',
+        type: 'origin'
+      };
+      isDropOff = true;
+    }
+
+    // Helper to get the home coordinates (where the passenger lives)
+    const getHomeCoords = (p) => isDropOff ? { lat: p.lat_dest, lng: p.lng_dest } : { lat: p.lat_origin, lng: p.lng_origin };
+
+    // Helper to calculate total distance of a passenger sequence in their respective mode
+    function calculateRouteDistance(passengers, depotCoords, isDrop) {
+      let routeDistance = 0;
+      if (isDrop) {
+        let prevLat = depotCoords.lat;
+        let prevLng = depotCoords.lng;
+        passengers.forEach(p => {
+          const home = getHomeCoords(p);
+          routeDistance += calculateDistance(prevLat, prevLng, home.lat, home.lng);
+          prevLat = home.lat;
+          prevLng = home.lng;
+        });
+      } else {
+        let prevLat = null;
+        let prevLng = null;
+        passengers.forEach(p => {
+          const home = getHomeCoords(p);
+          if (prevLat !== null) {
+            routeDistance += calculateDistance(prevLat, prevLng, home.lat, home.lng);
+          }
+          prevLat = home.lat;
+          prevLng = home.lng;
+        });
+        routeDistance += calculateDistance(prevLat, prevLng, depotCoords.lat, depotCoords.lng);
+      }
+      return routeDistance;
+    }
+
+    // Helper to optimally sequence a small group of up to 4 passengers
+    function sequenceRoute(passengerGroup, depotCoords, isDrop) {
+      if (isDrop) {
+        const sequenced = [];
+        let currentLat = depotCoords.lat;
+        let currentLng = depotCoords.lng;
+        let tempGroup = [...passengerGroup];
+        
+        while (tempGroup.length > 0) {
+          let closestIdx = 0;
+          let minDist = Infinity;
+          for (let i = 0; i < tempGroup.length; i++) {
+            const home = getHomeCoords(tempGroup[i]);
+            const dist = calculateDistance(currentLat, currentLng, home.lat, home.lng);
+            if (dist < minDist) {
+              minDist = dist;
+              closestIdx = i;
+            }
+          }
+          const nextP = tempGroup.splice(closestIdx, 1)[0];
+          sequenced.push(nextP);
+          const nextHome = getHomeCoords(nextP);
+          currentLat = nextHome.lat;
+          currentLng = nextHome.lng;
+        }
+        return sequenced;
+      } else {
+        const sequenced = [];
+        let tempGroup = [...passengerGroup];
+        
+        let startIdx = 0;
+        let maxDist = -1;
+        for (let i = 0; i < tempGroup.length; i++) {
+          const home = getHomeCoords(tempGroup[i]);
+          const dist = calculateDistance(depotCoords.lat, depotCoords.lng, home.lat, home.lng);
+          if (dist > maxDist) {
+            maxDist = dist;
+            startIdx = i;
+          }
+        }
+        
+        let currentP = tempGroup.splice(startIdx, 1)[0];
+        sequenced.push(currentP);
+        let currentHome = getHomeCoords(currentP);
+        
+        while (tempGroup.length > 0) {
+          let closestIdx = 0;
+          let minDist = Infinity;
+          for (let i = 0; i < tempGroup.length; i++) {
+            const home = getHomeCoords(tempGroup[i]);
+            const dist = calculateDistance(currentHome.lat, currentHome.lng, home.lat, home.lng);
+            if (dist < minDist) {
+              minDist = dist;
+              closestIdx = i;
+            }
+          }
+          currentP = tempGroup.splice(closestIdx, 1)[0];
+          sequenced.push(currentP);
+          currentHome = getHomeCoords(currentP);
+        }
+        return sequenced;
+      }
+    }
+
+    let unassigned = [...activePassengers];
+    const vehicles = [];
+    let vehicleIdCounter = 1;
+
+    // 1. Initial Greedy CVRP grouping using farthest seed and nearest neighbor
+    while (unassigned.length > 0) {
+      let vehiclePassengers = [];
+      
+      // Seed selection: farthest unassigned
+      let seedIndex = 0;
+      let maxDistance = -1;
+      for (let i = 0; i < unassigned.length; i++) {
+        const home = getHomeCoords(unassigned[i]);
+        const dist = calculateDistance(depot.lat, depot.lng, home.lat, home.lng);
+        if (dist > maxDistance) {
+          maxDistance = dist;
+          seedIndex = i;
+        }
+      }
+      
+      const seed = unassigned.splice(seedIndex, 1)[0];
+      vehiclePassengers.push(seed);
+      
+      // Nearest neighbor grouping up to 4
+      while (vehiclePassengers.length < 4 && unassigned.length > 0) {
+        const lastPassenger = vehiclePassengers[vehiclePassengers.length - 1];
+        const lastHome = getHomeCoords(lastPassenger);
+        let closestIndex = 0;
+        let minDistance = Infinity;
+        
+        for (let i = 0; i < unassigned.length; i++) {
+          const nextHome = getHomeCoords(unassigned[i]);
+          const dist = calculateDistance(lastHome.lat, lastHome.lng, nextHome.lat, nextHome.lng);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestIndex = i;
+          }
+        }
+        
+        const nextPassenger = unassigned.splice(closestIndex, 1)[0];
+        vehiclePassengers.push(nextPassenger);
+      }
+      
+      // Sequence the initial vehicle group
+      const sequencedGroup = sequenceRoute(vehiclePassengers, depot, isDropOff);
+      const dist = calculateRouteDistance(sequencedGroup, depot, isDropOff);
+
+      vehicles.push({
+        id: `v-${vehicleIdCounter}`,
+        name: `Veículo ${vehicleIdCounter}`,
+        passengers: sequencedGroup,
+        depot: depot,
+        distance: parseFloat(dist.toFixed(1))
+      });
+      
+      vehicleIdCounter++;
+    }
+    
+    // 2. Global Route Optimization Refinement (Local Search Swapping / 2-Opt)
+    // Iterates through all vehicles and tries to swap passenger assignments to globally minimize total routing distance.
+    let improved = true;
+    let iterationLimit = 150; // Safety cap
+    
+    while (improved && iterationLimit > 0) {
+      improved = false;
+      iterationLimit--;
+      
+      for (let i = 0; i < vehicles.length; i++) {
+        for (let j = i + 1; j < vehicles.length; j++) {
+          const v1 = vehicles[i];
+          const v2 = vehicles[j];
+          
+          for (let p1Idx = 0; p1Idx < v1.passengers.length; p1Idx++) {
+            for (let p2Idx = 0; p2Idx < v2.passengers.length; p2Idx++) {
+              const p1 = v1.passengers[p1Idx];
+              const p2 = v2.passengers[p2Idx];
+              
+              const currentV1Dist = v1.distance;
+              const currentV2Dist = v2.distance;
+              const currentTotal = currentV1Dist + currentV2Dist;
+              
+              // Simulate passenger swap
+              const newV1Passengers = [...v1.passengers];
+              const newV2Passengers = [...v2.passengers];
+              newV1Passengers[p1Idx] = p2;
+              newV2Passengers[p2Idx] = p1;
+              
+              // Re-sequence the simulated vehicles to find their optimal paths
+              const seqV1 = sequenceRoute(newV1Passengers, depot, isDropOff);
+              const seqV2 = sequenceRoute(newV2Passengers, depot, isDropOff);
+              
+              const swappedV1Dist = calculateRouteDistance(seqV1, depot, isDropOff);
+              const swappedV2Dist = calculateRouteDistance(seqV2, depot, isDropOff);
+              const swappedTotal = swappedV1Dist + swappedV2Dist;
+              
+              // If the swap improves total routing efficiency by more than 0.05km, commit!
+              if (swappedTotal < currentTotal - 0.05) {
+                v1.passengers = seqV1;
+                v1.distance = parseFloat(swappedV1Dist.toFixed(1));
+                
+                v2.passengers = seqV2;
+                v2.distance = parseFloat(swappedV2Dist.toFixed(1));
+                
+                improved = true;
+                break;
+              }
+            }
+            if (improved) break;
+          }
+          if (improved) break;
+        }
+        if (improved) break;
+      }
+    }
+    
+    state.vehicles = vehicles;
+    showToast(`Logística gerada! ${vehicles.length} veículo(s) otimizado(s) criado(s).`, 'success');
+  }
+
+  // Render optimized vehicles list in sidebar with drag-and-drop support
+  function renderVehiclesList() {
+    vehiclesList.innerHTML = '';
+
+    if (state.vehicles.length === 0) {
+      vehiclesList.innerHTML = `
+        <div class="empty-state">
+          <i data-lucide="route" class="empty-icon"></i>
+          <p>Logística não gerada.</p>
+          <span class="empty-sub">Clique em "Gerar Logística de Rotas" para agrupar os passageiros em veículos.</span>
+        </div>
+      `;
+      lucide.createIcons();
+      return;
+    }
+
+    // --- Drag state ---
+    let dragPassengerId = null;
+    let dragSourceVehicleId = null;
+
+    const MAX_CAPACITY = 4;
+
+    function getOverflowCount() {
+      return state.vehicles.filter(v => v.passengers.length > MAX_CAPACITY).length;
+    }
+
+    function rebuildAll() {
+      renderVehiclesList();
+      // Re-focus the active vehicle if any
+      if (state.currentActiveId) {
+        const el = document.getElementById(state.currentActiveId);
+        if (el) el.classList.add('active');
+      }
+    }
+
+    // Export button (top of vehicles list)
+    const exportBar = document.createElement('div');
+    exportBar.className = 'vehicle-export-bar';
+    exportBar.innerHTML = `
+      <button id="btn-export-report" class="btn btn-accent btn-sm full-width" id="btn-export-report">
+        <i data-lucide="file-spreadsheet"></i>
+        Gerar Relatório Excel
+      </button>
+    `;
+    vehiclesList.appendChild(exportBar);
+
+    state.vehicles.forEach(vehicle => {
+      const occupancy = vehicle.passengers.length;
+      const isOverflow = occupancy > MAX_CAPACITY;
+      const isFull    = occupancy === MAX_CAPACITY;
+
+      const card = document.createElement('div');
+      card.className = `vehicle-card ${state.currentActiveId === vehicle.id ? 'active' : ''} ${isOverflow ? 'vehicle-overflow' : ''}`;
+      card.id = vehicle.id;
+
+      const occupancyText = `${occupancy}/${MAX_CAPACITY} lugares`;
+      const isDropOff = vehicle.depot.type === 'origin';
+
+      // Header
+      const header = document.createElement('div');
+      header.className = 'vehicle-header';
+      header.innerHTML = `
+        <span class="vehicle-title">
+          <i data-lucide="truck"></i>
+          ${escapeHTML(vehicle.name)}
+        </span>
+        <span class="vehicle-occupancy ${isFull ? 'full' : ''} ${isOverflow ? 'overflow' : ''}">${occupancyText}</span>
+      `;
+      card.appendChild(header);
+
+      // Overflow warning
+      if (isOverflow) {
+        const warn = document.createElement('div');
+        warn.className = 'vehicle-overflow-warn';
+        warn.innerHTML = `<i data-lucide="alert-triangle"></i> Limite excedido! Máx. ${MAX_CAPACITY} passageiros.`;
+        card.appendChild(warn);
+      }
+
+      // Depot stop (header stop)
+      const depotStop = document.createElement('div');
+      depotStop.className = 'vehicle-stops';
+      if (isDropOff) {
+        depotStop.innerHTML = `
+          <div class="vehicle-stop-item">
+            <span class="stop-badge stop-origin">O</span>
+            <span class="stop-name" title="${vehicle.depot.address}">FORVIA (Retirada)</span>
+          </div>
+        `;
+      }
+      card.appendChild(depotStop);
+
+      // Draggable passenger drop zone
+      const dropZone = document.createElement('div');
+      dropZone.className = 'vehicle-drop-zone';
+      dropZone.dataset.vehicleId = vehicle.id;
+
+      vehicle.passengers.forEach((p, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'passenger-chip';
+        chip.draggable = true;
+        chip.dataset.passengerId = p.id;
+        chip.dataset.vehicleId = vehicle.id;
+
+        const stopAddr = isDropOff ? p.destAddress : p.originAddress;
+        chip.innerHTML = `
+          <span class="chip-drag-handle"><i data-lucide="grip-vertical"></i></span>
+          <span class="stop-badge chip-badge">${idx + 1}</span>
+          <span class="chip-name" title="${p.name}">${escapeHTML(p.name)}</span>
+          <span class="chip-addr" title="${stopAddr || ''}">${escapeHTML(stopAddr || '')}</span>
+        `;
+
+        // Drag start
+        chip.addEventListener('dragstart', (e) => {
+          dragPassengerId   = p.id;
+          dragSourceVehicleId = vehicle.id;
+          chip.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        chip.addEventListener('dragend', () => {
+          chip.classList.remove('dragging');
+          document.querySelectorAll('.vehicle-drop-zone').forEach(z => z.classList.remove('drag-over'));
+        });
+
+        dropZone.appendChild(chip);
+      });
+
+      // Drop zone events
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        dropZone.classList.add('drag-over');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+      });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+
+        const targetVehicleId = dropZone.dataset.vehicleId;
+        if (!dragPassengerId || targetVehicleId === dragSourceVehicleId) return;
+
+        // Find passenger and move between vehicles
+        const srcVehicle = state.vehicles.find(v => v.id === dragSourceVehicleId);
+        const tgtVehicle = state.vehicles.find(v => v.id === targetVehicleId);
+        if (!srcVehicle || !tgtVehicle) return;
+
+        const pIdx = srcVehicle.passengers.findIndex(p => p.id === dragPassengerId);
+        if (pIdx === -1) return;
+
+        const [movedPassenger] = srcVehicle.passengers.splice(pIdx, 1);
+        tgtVehicle.passengers.push(movedPassenger);
+
+        // Remove empty vehicles
+        state.vehicles = state.vehicles.filter(v => v.passengers.length > 0);
+        // Re-number vehicle names
+        state.vehicles.forEach((v, i) => { v.name = `Veículo ${i + 1}`; });
+
+        dragPassengerId     = null;
+        dragSourceVehicleId = null;
+        rebuildAll();
+      });
+
+      card.appendChild(dropZone);
+
+      // Footer stop (destination depot for pick-up mode)
+      if (!isDropOff) {
+        const footerStop = document.createElement('div');
+        footerStop.className = 'vehicle-stops';
+        footerStop.innerHTML = `
+          <div class="vehicle-stop-item">
+            <span class="stop-badge stop-origin" style="background-color: var(--color-success);">D</span>
+            <span class="stop-name" title="${vehicle.depot.address}">FORVIA (Colocada)</span>
+          </div>
+        `;
+        card.appendChild(footerStop);
+      }
+
+      // Footer distance info
+      const footer = document.createElement('div');
+      footer.style.cssText = 'font-size:10px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;margin-top:4px;border-top:1px dashed var(--border-color);padding-top:6px;';
+      footer.innerHTML = `
+        <span class="vehicle-distance-info">Percurso total: <strong class="distance-val">${vehicle.distance} km</strong>${vehicle.duration ? ` (~${vehicle.duration} min)` : ''}</span>
+        <span style="color:var(--accent-color);font-weight:700;">Ver Rota <i data-lucide="chevron-right" style="width:10px;height:10px;vertical-align:middle;"></i></span>
+      `;
+      card.appendChild(footer);
+
+      card.addEventListener('click', (e) => {
+        // Don't trigger if clicking a chip drag handle
+        if (e.target.closest('.passenger-chip')) return;
+        focusVehicleItem(vehicle.id);
+      });
+
+      vehiclesList.appendChild(card);
+    });
+
+    // "Add Vehicle" card button at the end
+    const addCard = document.createElement('div');
+    addCard.className = 'vehicle-card btn-add-vehicle-card';
+    addCard.innerHTML = `
+      <div class="add-vehicle-inner">
+        <i data-lucide="plus-circle" class="add-vehicle-icon"></i>
+        <span class="add-vehicle-text">Adicionar Veículo</span>
+      </div>
+    `;
+    addCard.addEventListener('click', () => {
+      let depot = null;
+      if (state.vehicles.length > 0) {
+        depot = state.vehicles[0].depot;
+      } else {
+        const activePassengers = state.passengers.filter(p => p.status === 'success' || p.status === 'cache');
+        if (activePassengers.length > 0) {
+          const firstSuccessful = activePassengers.find(p => p.lat_origin !== null && p.lng_origin !== null);
+          if (firstSuccessful) {
+            depot = {
+              lat: firstSuccessful.lat_origin,
+              lng: firstSuccessful.lng_origin,
+              address: firstSuccessful.originAddress || 'FORVIA',
+              type: 'origin'
+            };
+          }
+        }
+      }
+
+      if (!depot) {
+        showToast('Por favor, carregue e geolocalize os passageiros primeiro.', 'error');
+        return;
+      }
+
+      const newId = `vehicle_${Date.now()}`;
+      state.vehicles.push({
+        id: newId,
+        name: `Veículo ${state.vehicles.length + 1}`,
+        passengers: [],
+        depot: depot,
+        distance: 0,
+        duration: 0
+      });
+      
+      rebuildAll();
+      focusVehicleItem(newId);
+      showToast('Novo veículo adicionado com sucesso!', 'success');
+    });
+    vehiclesList.appendChild(addCard);
+
+    lucide.createIcons();
+
+    // Wire up export button
+    const btnExport = document.getElementById('btn-export-report');
+    if (btnExport) {
+      btnExport.addEventListener('click', () => {
+        const overflowCount = state.vehicles.filter(v => v.passengers.length > MAX_CAPACITY).length;
+        if (overflowCount > 0) {
+          showToast(`Não é possível gerar o relatório. ${overflowCount} veículo(s) com mais de ${MAX_CAPACITY} passageiros (marcados em vermelho).`, 'error');
+          return;
+        }
+        exportVehiclesReport();
+      });
+    }
+  }
+
+  // Export Excel report: vehicle number + all original passenger data columns
+  function exportVehiclesReport() {
+    if (typeof XLSX === 'undefined') {
+      showToast('Biblioteca SheetJS não carregada.', 'error');
+      return;
+    }
+
+    const rows = [];
+
+    state.vehicles.forEach((vehicle, vIdx) => {
+      const vehicleNum = vIdx + 1;
+      vehicle.passengers.forEach(p => {
+        const baseRow = p._rawRow ? { ...p._rawRow } : {};
+        // Prepend vehicle number
+        const exportRow = {
+          'Veículo': vehicleNum,
+          'Nome Passageiro': p.name,
+          ...baseRow
+        };
+        // Remove duplicate name key if present
+        delete exportRow['nome passageiro'];
+        delete exportRow['Nome Passageiro'.toLowerCase()];
+        rows.push(exportRow);
+      });
+    });
+
+    if (rows.length === 0) {
+      showToast('Nenhum dado para exportar.', 'error');
+      return;
+    }
+
+    try {
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook  = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Roteirização');
+
+      // Column widths
+      worksheet['!cols'] = [
+        { wch: 8 },   // Veículo
+        { wch: 28 },  // Nome Passageiro
+        ...Object.keys(rows[0]).slice(2).map(() => ({ wch: 22 }))
+      ];
+
+      const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url    = URL.createObjectURL(blob);
+      const link   = document.createElement('a');
+      link.href    = url;
+      link.download = `routefleet_roteirizacao_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('Relatório Excel gerado com sucesso!', 'success');
+    } catch (err) {
+      showToast('Erro ao gerar o relatório Excel.', 'error');
+      console.error(err);
+    }
+  }
+
+  // Focus a vehicle and trigger its route display
+  function focusVehicleItem(id) {
+    if (state.currentActiveId) {
+      const prevElement = document.getElementById(state.currentActiveId);
+      if (prevElement) prevElement.classList.remove('active');
+    }
+    
+    state.currentActiveId = id;
+    const element = document.getElementById(id);
+    if (element) {
+      element.classList.add('active');
+      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    const vehicle = state.vehicles.find(v => v.id === id);
+    if (vehicle) {
+      drawVehicleRouteOnMap(vehicle);
+    }
+  }
+
+    // Draw customized high-contrast routes and sequential markers on the map
+  async function drawVehicleRouteOnMap(vehicle) {
+    // Clear any previous vehicle route layers
+    state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
+    state.vehicleRouteLayers = [];
+    
+    map.closePopup();
+    
+    const points = [];
+    const isDropOff = vehicle.depot.type === 'origin';
+    
+    // 1. Draw Depot Marker
+    const depotMarker = L.marker([vehicle.depot.lat, vehicle.depot.lng], {
+      icon: L.divIcon({
+        className: 'custom-map-marker',
+        html: `
+          <div style="
+            width: 52px;
+            height: 20px;
+            background-color: ${isDropOff ? 'var(--color-info)' : 'var(--color-success)'};
+            border: 2px solid #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: 900;
+            color: #ffffff;
+          ">
+            ${isDropOff ? 'DEPOT' : 'EMPRESA'}
+          </div>
+        `,
+        iconSize: [52, 20],
+        iconAnchor: [26, 10]
+      })
+    });
+    depotMarker.bindPopup(`<strong>Ponto de ${isDropOff ? 'Retirada (Origem)' : 'Entrega (Destino)'}</strong><br>${vehicle.depot.address}`);
+    depotMarker.addTo(map);
+    state.vehicleRouteLayers.push(depotMarker);
+    
+    if (isDropOff) {
+      // Retirada: Depot -> stops
+      points.push([vehicle.depot.lat, vehicle.depot.lng]);
+      
+      vehicle.passengers.forEach((p, idx) => {
+        if (p.lat_dest !== null && p.lng_dest !== null) {
+          const destLatLng = [p.lat_dest, p.lng_dest];
+          points.push(destLatLng);
+          
+          const seqMarker = L.marker(destLatLng, {
+            icon: L.divIcon({
+              className: 'custom-map-marker',
+              html: `
+                <div style="
+                  width: 24px;
+                  height: 24px;
+                  background-color: var(--accent-color);
+                  border: 2px solid #ffffff;
+                  border-radius: 50%;
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 11px;
+                  font-weight: 800;
+                  color: #ffffff;
+                ">
+                  ${idx + 1}
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            })
+          });
+          
+          seqMarker.bindPopup(`
+            <strong>${idx + 1}ª Parada (Desembarque) | ${p.name}</strong><br>
+            <span style="font-size: 11px; color: var(--text-secondary);">${p.destAddress}</span>
+          `);
+          seqMarker.addTo(map);
+          state.vehicleRouteLayers.push(seqMarker);
+        }
+      });
+    } else {
+      // Colocada: stops -> Depot
+      vehicle.passengers.forEach((p, idx) => {
+        if (p.lat_origin !== null && p.lng_origin !== null) {
+          const origLatLng = [p.lat_origin, p.lng_origin];
+          points.push(origLatLng);
+          
+          const seqMarker = L.marker(origLatLng, {
+            icon: L.divIcon({
+              className: 'custom-map-marker',
+              html: `
+                <div style="
+                  width: 24px;
+                  height: 24px;
+                  background-color: var(--accent-color);
+                  border: 2px solid #ffffff;
+                  border-radius: 50%;
+                  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-size: 11px;
+                  font-weight: 800;
+                  color: #ffffff;
+                ">
+                  ${idx + 1}
+                </div>
+              `,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12]
+            })
+          });
+          
+          seqMarker.bindPopup(`
+            <strong>${idx + 1}ª Parada (Embarque) | ${p.name}</strong><br>
+            <span style="font-size: 11px; color: var(--text-secondary);">${p.originAddress}</span>
+          `);
+          seqMarker.addTo(map);
+          state.vehicleRouteLayers.push(seqMarker);
+        }
+      });
+      
+      points.push([vehicle.depot.lat, vehicle.depot.lng]);
+    }
+
+    // 3. One-way route ends at the last passenger's destination (no return to depot)
+    
+    // 4. Draw fallback straight-line polyline (dashed)
+    let fallbackPolyline = null;
+    if (points.length >= 2) {
+      fallbackPolyline = L.polyline(points, {
+        color: 'var(--accent-color)',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '6, 8'
+      }).addTo(map);
+      state.vehicleRouteLayers.push(fallbackPolyline);
+      
+      const bounds = L.latLngBounds(points);
+      map.fitBounds(bounds.pad(0.2), {
+        animate: true,
+        duration: 1.0
+      });
+    }
+
+    // 5. Try fetching actual road path from OSRM to render GPS-like streets
+    try {
+      const osrmCoords = points.map(p => `${p[1]},${p[0]}`).join(';');
+      const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const roadPoints = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+          
+          // Remove the fallback line
+          if (fallbackPolyline) {
+            map.removeLayer(fallbackPolyline);
+            state.vehicleRouteLayers = state.vehicleRouteLayers.filter(l => l !== fallbackPolyline);
+          }
+          
+          // Double-layer polyline for a stunning high-contrast GPS look (dark border shadow + accent color line)
+          const shadowPolyline = L.polyline(roadPoints, {
+            color: '#000000',
+            weight: 8,
+            opacity: 0.35,
+            lineJoin: 'round'
+          }).addTo(map);
+          state.vehicleRouteLayers.push(shadowPolyline);
+
+          const realRoutePolyline = L.polyline(roadPoints, {
+            color: 'var(--accent-color)',
+            weight: 5,
+            opacity: 0.9,
+            lineJoin: 'round'
+          }).addTo(map);
+          state.vehicleRouteLayers.push(realRoutePolyline);
+
+          // Update distance and duration with real street values
+          const realDistKm = parseFloat((route.distance / 1000).toFixed(1));
+          const durationMins = Math.round(route.duration / 60);
+
+          vehicle.distance = realDistKm;
+          vehicle.duration = durationMins;
+
+          // Update the card details in the DOM
+          const cardElement = document.getElementById(vehicle.id);
+          if (cardElement) {
+            const infoSpan = cardElement.querySelector('.vehicle-distance-info');
+            if (infoSpan) {
+              infoSpan.innerHTML = `Percurso total: <strong class="distance-val">${realDistKm} km</strong> (~${durationMins} min)`;
+            }
+          }
+
+          // Fit map bounds to the exact street coordinates
+          const bounds = L.latLngBounds(roadPoints);
+          map.fitBounds(bounds.pad(0.2), {
+            animate: true,
+            duration: 1.0
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[RouteFleet] Falha ao obter rota por ruas via OSRM. Exibindo linha reta como fallback.', err);
+    }
+  }
+
+  // Hide all passenger markers/lines from the map when in vehicles tab to keep the view clean
+  function hideAllPassengerMapLayers() {
+    Object.values(state.markers).forEach(m => {
+      if (Array.isArray(m)) {
+        m.forEach(layer => map.removeLayer(layer));
+      } else {
+        map.removeLayer(m);
+      }
+    });
+  }
+
+  // Restore all passenger markers/lines to the map when switching back to passengers tab
+  function restoreAllPassengerMapLayers() {
+    // Clear any vehicle route layers currently drawn
+    state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
+    state.vehicleRouteLayers = [];
+    
+    state.passengers.forEach(p => {
+      const m = state.markers[p.id];
+      if (m) {
+        if (Array.isArray(m)) {
+          m.forEach(layer => layer.addTo(map));
+        } else {
+          m.addTo(map);
+        }
+      }
+    });
+    
+    fitMapBounds();
+  }
+
+  // Handle Tab Switch Actions
+  function switchTab(tab) {
+    tabButtons.forEach(b => b.classList.remove('active'));
+    
+    const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    state.activeTab = tab;
+    
+    if (tab === 'passengers') {
+      passengersTabContent.classList.remove('hidden');
+      vehiclesTabContent.classList.add('hidden');
+      restoreAllPassengerMapLayers();
+    } else {
+      passengersTabContent.classList.add('hidden');
+      vehiclesTabContent.classList.remove('hidden');
+      hideAllPassengerMapLayers();
+      renderVehiclesList();
+    }
+  }
+
+  // Tab buttons click triggers
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      const tab = btn.dataset.tab;
+      switchTab(tab);
+    });
+  });
+
+  // Optimize button click trigger
+  btnOptimizeRoutes.addEventListener('click', () => {
+    if (btnOptimizeRoutes.classList.contains('disabled')) return;
+    
+    optimizeVehiclesLogistics();
+    btnTabVehicles.disabled = false;
+    switchTab('vehicles');
+    
+    if (state.vehicles.length > 0) {
+      focusVehicleItem(state.vehicles[0].id);
     }
   });
 
