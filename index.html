@@ -45,7 +45,7 @@
           <i data-lucide="file-up" class="upload-icon"></i>
           <div class="upload-dropzone-text-group">
             <p class="upload-text">Arraste ou <span class="highlight">clique para buscar</span></p>
-            <p class="upload-hint">Modelo: <code>Nome Passageiro</code>, <code>endereco origem</code></p>
+            <p class="upload-hint">Modelo: <code>Nome Passageiro</code>, <code>Endereço Origem</code>, <code>Endereço Destino</code></p>
           </div>
         </div>
 
@@ -120,6 +120,7 @@
             <button class="filter-btn active" data-filter="all">Todos</button>
             <button class="filter-btn" data-filter="success">Encontrados</button>
             <button class="filter-btn" data-filter="partial">Parciais</button>
+            <button class="filter-btn" data-filter="loading">Processando</button>
             <button class="filter-btn" data-filter="error">Erros</button>
           </div>
 
@@ -210,7 +211,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
   <!-- PapaParse for CSV parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" integrity="sha512-dfX5uYVXzyU8+KHDKVx8LVq9NS1gRX5hy1FhingbTuBfZOThOIurWZ1Dm659G50c11acVd7YDU567jW5uV5vWA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
   <!-- Lucide Icons for modern UI icons -->
   <script src="https://unpkg.com/lucide@latest"></script>

@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const toastContainer = document.getElementById('toast-container');
   const filterGroup = document.getElementById('filter-group');
   const filterButtons = document.querySelectorAll('.filter-btn');
-  
+
   // VRP DOM elements
   const btnOptimizeRoutes = document.getElementById('btn-optimize-routes');
   const btnTabVehicles = document.getElementById('btn-tab-vehicles');
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   const defaultCenter = [-14.2350, -51.9253]; // Brazil Center
   const defaultZoom = 4;
-  
+
   const map = L.map('map', {
     zoomControl: true
   }).setView(defaultCenter, defaultZoom);
@@ -206,13 +206,13 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       color = type === 'origin' ? 'var(--color-info)' : 'var(--color-warning)';
     }
-    
+
     const label = type === 'origin' ? 'O' : 'D';
 
     const labelHtml = labelData
       ? `<div class="marker-label">${labelData.name}<span class="marker-label-sub">${labelData.sub}</span></div>`
       : '';
-    
+
     return L.divIcon({
       className: 'custom-map-marker',
       html: `
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
-    
+
     let iconName = 'info';
     if (type === 'success') iconName = 'check-circle-2';
     if (type === 'error') iconName = 'alert-triangle';
@@ -289,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   // 5. CSV Parsing & Upload Handlers
   // --------------------------------------------------------------------------
-  
+
   // Click dropzone to open browser selection
   dropzone.addEventListener('click', () => {
     if (state.isGeocoding) {
@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('dragover');
-    
+
     if (state.isGeocoding) {
       showToast('Aguarde o processamento atual finalizar.', 'error');
       return;
@@ -327,13 +327,14 @@ document.addEventListener('DOMContentLoaded', () => {
   fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
       handleUploadedFile(e.target.files[0]);
+      e.target.value = ''; // Reset para permitir re-upload do mesmo arquivo
     }
   });
 
   // Helper to build a complete address string from components
   function buildAddress(street, number, neighborhood, city, stateCode) {
     const parts = [];
-    
+
     let streetPart = (street || '').toString().trim();
     if (streetPart) {
       const num = (number || '').toString().trim();
@@ -344,12 +345,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       parts.push(streetPart);
     }
-    
+
     const neigh = (neighborhood || '').toString().trim();
     if (neigh) {
       parts.push(neigh);
     }
-    
+
     const c = (city || '').toString().trim();
     const st = (stateCode || '').toString().trim();
     if (c && st) {
@@ -358,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (c) parts.push(c);
       if (st) parts.push(st);
     }
-    
+
     return parts.join(', ');
   }
 
@@ -386,32 +387,32 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const ABBREV_CONTRACT = [
-    { from: /^Avenida\s+/i,  to: 'Av. '  },
-    { from: /^Rodovia\s+/i,  to: 'Rod. ' },
-    { from: /^Alameda\s+/i,  to: 'Al. '  },
-    { from: /^Travessa\s+/i, to: 'Trav. '},
-    { from: /^Praça\s+/i,    to: 'Pça. ' },
-    { from: /^Estrada\s+/i,  to: 'Est. ' },
-    { from: /^Rua\s+/i,      to: 'R. '   },
+    { from: /^Avenida\s+/i, to: 'Av. ' },
+    { from: /^Rodovia\s+/i, to: 'Rod. ' },
+    { from: /^Alameda\s+/i, to: 'Al. ' },
+    { from: /^Travessa\s+/i, to: 'Trav. ' },
+    { from: /^Praça\s+/i, to: 'Pça. ' },
+    { from: /^Estrada\s+/i, to: 'Est. ' },
+    { from: /^Rua\s+/i, to: 'R. ' },
   ];
 
   // Common Brazilian typo/spelling variant corrections
   const SPELLING_CORRECTIONS = [
-    { from: /\bWilly\b/gi,     to: 'Willi'   },
-    { from: /\bDon\b/g,        to: 'Dom'      },
-    { from: /\bFilhos\b/gi,    to: 'Filho'    },
-    { from: /\bSaint\b/gi,     to: 'São'      },
-    { from: /\bSta\.\s+/gi,    to: 'Santa '   },
-    { from: /\bSto\.\s+/gi,    to: 'Santo '   },
-    { from: /\bDr\.\s+/gi,     to: 'Doutor '  },
-    { from: /\bCel\.\s+/gi,    to: 'Coronel ' },
-    { from: /\bCap\.\s+/gi,    to: 'Capitão ' },
-    { from: /\bGal\.\s+/gi,    to: 'General ' },
-    { from: /\bPres\.\s+/gi,   to: 'Presidente ' },
-    { from: /\bProf\.\s+/gi,   to: 'Professor ' },
-    { from: /\bEng\.\s+/gi,    to: 'Engenheiro ' },
-    { from: /\bMaj\.\s+/gi,    to: 'Major '   },
-    { from: /\bTen\.\s+/gi,    to: 'Tenente ' },
+    { from: /\bWilly\b/gi, to: 'Willi' },
+    { from: /\bDon\b/g, to: 'Dom' },
+    { from: /\bFilhos\b/gi, to: 'Filho' },
+    { from: /\bSaint\b/gi, to: 'São' },
+    { from: /\bSta\.\s+/gi, to: 'Santa ' },
+    { from: /\bSto\.\s+/gi, to: 'Santo ' },
+    { from: /\bDr\.\s+/gi, to: 'Doutor ' },
+    { from: /\bCel\.\s+/gi, to: 'Coronel ' },
+    { from: /\bCap\.\s+/gi, to: 'Capitão ' },
+    { from: /\bGal\.\s+/gi, to: 'General ' },
+    { from: /\bPres\.\s+/gi, to: 'Presidente ' },
+    { from: /\bProf\.\s+/gi, to: 'Professor ' },
+    { from: /\bEng\.\s+/gi, to: 'Engenheiro ' },
+    { from: /\bMaj\.\s+/gi, to: 'Major ' },
+    { from: /\bTen\.\s+/gi, to: 'Tenente ' },
   ];
 
   // Strip diacritics/accents for plain-ASCII variant queries
@@ -455,11 +456,11 @@ document.addEventListener('DOMContentLoaded', () => {
   function cleanAddressText(addr) {
     if (!addr) return '';
     let clean = addr.trim();
-    
+
     // 1. Remove company/facility prefix if present before the street keyword
     const streetPrefixPats = ['av\.', 'av\b', 'avenida\b', 'rua\b', 'r\.', 'r\b', 'rod\.', 'rod\b', 'rodovia\b', 'alameda\b', 'al\.', 'al\b', 'travessa\b', 'trav\.', 'trv\.', 'praça\b', 'praca\b', 'pça\.', 'pça\b', 'estrada\b', 'est\.', 'viela\b', 'servidão\b', 'servidao\b'];
     const prefixRegex = new RegExp(`^(.+?)\\s*(?:-\\s*|\\s+)\\b(${streetPrefixPats.join('|')})\\b`, 'i');
-    
+
     const match = clean.match(prefixRegex);
     if (match) {
       const prefix = match[1].toLowerCase().trim();
@@ -490,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
     if (parts.length < 2) return queries;
-    
+
     const streetPart = parts[0];
     const lastPart = parts[parts.length - 1]; // "City - State" or similar
 
@@ -526,7 +527,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/\b(dos|das|do|da|de|d')\b/gi, ' ')
       .replace(/\s+/g, ' ')
       .trim();
-    
+
     if (streetNoPrep !== baseStreet) {
       const pNoPrep = [...parts];
       pNoPrep[0] = streetNoPrep;
@@ -577,21 +578,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── H. Final simple fallback "Street, City - State" ──────────────────
     if (streetPart !== lastPart) addUnique(`${streetPart}, ${lastPart}`);
-    
+
     return queries;
   }
 
   // Main file processor supporting Excel and CSV formats
   function handleUploadedFile(file) {
     const fileName = file.name.toLowerCase();
-    
+
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       if (typeof XLSX === 'undefined') {
         showToast('Biblioteca SheetJS (Excel) não foi carregada. Verifique sua conexão.', 'error');
         return;
       }
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -609,7 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Use SheetJS for CSV parsing if available, otherwise fallback to PapaParse
       if (typeof XLSX !== 'undefined') {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
@@ -627,10 +628,10 @@ document.addEventListener('DOMContentLoaded', () => {
         Papa.parse(file, {
           header: true,
           skipEmptyLines: true,
-          complete: function(results) {
+          complete: function (results) {
             processParsedData(results.data);
           },
-          error: function(err) {
+          error: function (err) {
             showToast('Erro ao ler o arquivo CSV. Verifique a formatação.', 'error');
             console.error(err);
           }
@@ -652,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const firstRow = data[0];
     const columns = Object.keys(firstRow);
-    
+
     const findCol = (possibleNames) => {
       return columns.find(col => possibleNames.includes(col.toLowerCase().trim()));
     };
@@ -684,9 +685,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset previous dataset state (map clean, markers, list)
     clearAllData();
 
-    // Map rows to application state objects
-    state.passengers = data.map((row, idx) => {
-      const name = row[passengerNameCol]?.trim() || `Passageiro ${idx + 1}`;
+    const skipped = [];
+    const validPassengers = [];
+
+    data.forEach((row, idx) => {
+      const name = row[passengerNameCol]?.toString().trim() || "";
+      const rowNum = idx + 2; // Consideration for header row and 1-based indexing
+
+      // Validação do Nome
+      if (!name) {
+        skipped.push({ row: rowNum, reason: 'Nome do Passageiro ausente' });
+        return;
+      }
       
       if (isRouteMode) {
         // Raw components for structured Nominatim queries
@@ -702,16 +712,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const destCity   = (row[munDestCol]  || '').toString().trim();
         const destState  = (row[ufDestCol]   || '').toString().trim();
 
+        // Validação campos obrigatórios Route Mode
+        const missing = [];
+        if (!origStreet) missing.push('Endereço Origem');
+        if (!origNum)    missing.push('Nº Origem');
+        if (!origNeigh)  missing.push('Bairro Origem');
+        if (!origCity)   missing.push('Municipio Origem');
+        if (!origState)  missing.push('UF Origem');
+        if (!destStreet) missing.push('Endereço Destino');
+        if (!destNum)    missing.push('Nº Destino');
+        if (!destNeigh)  missing.push('Bairro Destino');
+        if (!destCity)   missing.push('Municipio Destino');
+        if (!destState)  missing.push('UF Destino');
+
+        if (missing.length > 0) {
+          skipped.push({ row: rowNum, name: name, reason: `Campos obrigatórios vazios: ${missing.join(', ')}` });
+          return;
+        }
+
         const originAddress = buildAddress(origStreet, origNum, origNeigh, origCity, origState);
         const destAddress   = buildAddress(destStreet, destNum, destNeigh, destCity, destState);
 
-        return {
+        validPassengers.push({
           id: `p-${idx}-${Date.now()}`,
           name: name,
           mode: 'route',
           originAddress: originAddress,
           destAddress: destAddress,
-          // Raw components for structured lookup
           orig: { street: origStreet, num: origNum, neigh: origNeigh, city: origCity, state: origState },
           dest: { street: destStreet, num: destNum, neigh: destNeigh, city: destCity, state: destState },
           lat_origin: null,
@@ -722,11 +749,15 @@ document.addEventListener('DOMContentLoaded', () => {
           status_origin: 'pending',
           status_dest: 'pending',
           source: null,
-          _rawRow: row  // store original row for export
-        };
+          _rawRow: row
+        });
       } else {
-        const address = row[simpleAddressCol]?.trim() || '';
-        return {
+        const address = row[simpleAddressCol]?.toString().trim() || '';
+        if (!address) {
+          skipped.push({ row: rowNum, name: name, reason: 'Endereço não identificado' });
+          return;
+        }
+        validPassengers.push({
           id: `p-${idx}-${Date.now()}`,
           name: name,
           mode: 'single',
@@ -735,10 +766,25 @@ document.addEventListener('DOMContentLoaded', () => {
           lng: null,
           status: 'pending',
           source: null,
-          _rawRow: row  // store original row for export
-        };
+          _rawRow: row
+        });
       }
-    }).filter(p => p.mode === 'route' ? (p.originAddress || p.destAddress) : p.address);
+    });
+
+    state.passengers = validPassengers;
+
+    // Reportar linhas ignoradas
+    if (skipped.length > 0) {
+      console.warn('[RouteFleet] Linhas ignoradas na importação:', skipped);
+      const totalSkipped = skipped.length;
+      if (state.passengers.length === 0) {
+        const first = skipped[0];
+        showToast(`Falha: ${totalSkipped} linha(s) inválida(s). Ex: Linha ${first.row} - ${first.reason}`, 'error');
+        return;
+      } else {
+        showToast(`${totalSkipped} linha(s) ignorada(s). Ex: Linha ${skipped[0].row} - ${skipped[0].reason}`, 'error');
+      }
+    }
 
     if (state.passengers.length === 0) {
       showToast('Nenhum passageiro com endereço válido encontrado.', 'error');
@@ -746,17 +792,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     showToast(`${state.passengers.length} passageiros carregados. Iniciando geocodificação...`, 'success');
-    
+
     // Update count displays
     countTotal.textContent = state.passengers.length;
     searchInput.disabled = false;
     filterGroup.classList.remove('disabled');
     btnRecenter.disabled = false;
     btnClear.disabled = false;
-    
+
     // Render list initial status
     renderPassengersList();
-    
+
     // Start geocoding queue
     startGeocodingQueue();
   }
@@ -780,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
   async function startGeocodingQueue() {
     state.isGeocoding = true;
     state.cancelRequested = false;
-    
+
     progressContainer.classList.remove('hidden');
     dropzone.style.pointerEvents = 'none';
     dropzone.style.opacity = '0.6';
@@ -801,28 +847,30 @@ document.addEventListener('DOMContentLoaded', () => {
           const results = await response.json();
           if (results && results.length > 0) {
             const firstResult = results[0];
-            
+
             // Validate municipality to avoid matching coordinates in a completely different city
             if (expectedCity) {
               const displayNorm = removeDiacritics(firstResult.display_name).toLowerCase().replace(/[^a-z0-9]/g, '');
               const expectedNorm = removeDiacritics(expectedCity).toLowerCase().replace(/[^a-z0-9]/g, '');
               if (!displayNorm.includes(expectedNorm)) {
-                console.warn(`[RouteFleet] Resultado rejeitado por divergência de município. Esperado: "${expectedCity}", Obtido: "${firstResult.display_name}"`);
-                return null;
+                return { coords: null, reason: 'Divergência de município' };
               }
             }
 
-            return { 
-              lat: parseFloat(firstResult.lat), 
-              lng: parseFloat(firstResult.lon),
-              display_name: firstResult.display_name
+            return {
+              coords: {
+                lat: parseFloat(firstResult.lat),
+                lng: parseFloat(firstResult.lon),
+                display_name: firstResult.display_name
+              },
+              reason: null
             };
           }
         }
       } catch (err) {
         console.error('Nominatim API error:', err);
       }
-      return null;
+      return { coords: null, reason: 'Erro na API de mapas' };
     }
 
     // Build structured Nominatim query URLs from raw address components
@@ -842,7 +890,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const numClean = num ? num.replace(/(\d+)\s*[\/\-]\s*\d+/g, '$1').trim() : '';
 
       // Expand / contract abbreviations on the cleaned street
-      const streetExpanded  = expandAbbreviations(streetClean);
+      const streetExpanded = expandAbbreviations(streetClean);
       const streetContracted = contractAbbreviations(streetClean);
 
       const makeUrl = (s, n, c, st, district) => {
@@ -920,125 +968,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Helper to get coordinates with local cache check and fallback logic
     async function getCoordsWithFallback(address, components) {
-      if (!address) return null;
+      if (!address) return { coords: null, reason: 'Endereço vazio' };
 
       // ── Validate street type ───────────────────────────────────────────────
-      // If neither the full address string nor the street component contains a
-      // recognizable logradouro type, reject immediately to avoid wrong matches.
       const streetToCheck = (components && components.street) ? components.street : address;
       if (!hasStreetTypePrefix(streetToCheck)) {
-        console.warn(`[RouteFleet] Endereço rejeitado — sem tipo de logradouro (Rua, Av., etc.): "${address}"`);
-        return null;
+        return { coords: null, reason: 'Falta tipo de logradouro (Rua, Av, etc)' };
       }
-      // ─────────────────────────────────────────────────────────────────────
 
       const expectedCity = (components && components.city) ? components.city : null;
 
-      // Check original address cache first
+      // Check original address cache
       const origCacheKey = CACHE_PREFIX + address.toLowerCase().trim();
       const origCached = localStorage.getItem(origCacheKey);
       if (origCached) {
         try {
           const coords = JSON.parse(origCached);
-          if (coords) {
-            if (!coords.display_name) {
-              // Old cache format without display_name -> remove to force fresh fetch and validation
-              localStorage.removeItem(origCacheKey);
-            } else if (expectedCity) {
+          if (coords && coords.display_name) {
+            if (expectedCity) {
               const displayNorm = removeDiacritics(coords.display_name).toLowerCase().replace(/[^a-z0-9]/g, '');
               const expectedNorm = removeDiacritics(expectedCity).toLowerCase().replace(/[^a-z0-9]/g, '');
-              if (displayNorm.includes(expectedNorm)) {
-                return coords;
-              } else {
-                console.warn(`[RouteFleet] Cache de origem rejeitado por divergência de município: "${expectedCity}" vs "${coords.display_name}"`);
-                localStorage.removeItem(origCacheKey);
-              }
+              if (displayNorm.includes(expectedNorm)) return { coords, reason: null };
             } else {
-              return coords;
+              return { coords, reason: null };
             }
           }
-        } catch(e) {}
+        } catch (e) { }
       }
-      
+
       const queriesToTry = generateAddressFallbacks(address);
       const structuredUrls = buildStructuredUrls(components);
+      let lastReason = 'Endereço não localizado no mapa';
 
-      // 1. First try structured queries (more precise)
+      // 1. Try structured
       for (const url of structuredUrls) {
-        const cacheKey = CACHE_PREFIX + 'struct_' + url.replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(-80);
-        const cachedData = localStorage.getItem(cacheKey);
-        if (cachedData) {
-          try {
-            const coords = JSON.parse(cachedData);
-            if (coords) {
-              if (!coords.display_name) {
-                localStorage.removeItem(cacheKey);
-              } else if (expectedCity) {
-                const displayNorm = removeDiacritics(coords.display_name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                const expectedNorm = removeDiacritics(expectedCity).toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (displayNorm.includes(expectedNorm)) {
-                  localStorage.setItem(origCacheKey, JSON.stringify(coords));
-                  return coords;
-                } else {
-                  console.warn(`[RouteFleet] Cache estruturado rejeitado por divergência de município: "${expectedCity}" vs "${coords.display_name}"`);
-                  localStorage.removeItem(cacheKey);
-                }
-              } else {
-                localStorage.setItem(origCacheKey, JSON.stringify(coords));
-                return coords;
-              }
-            }
-          } catch(e) {}
-        }
-        const coords = await fetchNominatim(url, expectedCity);
+        const { coords, reason } = await fetchNominatim(url, expectedCity);
         if (coords) {
-          localStorage.setItem(cacheKey, JSON.stringify(coords));
           localStorage.setItem(origCacheKey, JSON.stringify(coords));
-          return coords;
+          return { coords, reason: null };
         }
+        if (reason) lastReason = reason;
       }
 
-      // 2. Then try free-text fallback queries
+      // 2. Try fallbacks
       for (const query of queriesToTry) {
-        const cacheKey = CACHE_PREFIX + query.toLowerCase().trim();
-        const cachedData = localStorage.getItem(cacheKey);
-        if (cachedData) {
-          try {
-            const coords = JSON.parse(cachedData);
-            if (coords) {
-              if (!coords.display_name) {
-                localStorage.removeItem(cacheKey);
-              } else if (expectedCity) {
-                const displayNorm = removeDiacritics(coords.display_name).toLowerCase().replace(/[^a-z0-9]/g, '');
-                const expectedNorm = removeDiacritics(expectedCity).toLowerCase().replace(/[^a-z0-9]/g, '');
-                if (displayNorm.includes(expectedNorm)) {
-                  localStorage.setItem(origCacheKey, JSON.stringify(coords));
-                  return coords;
-                } else {
-                  console.warn(`[RouteFleet] Cache livre rejeitado por divergência de município: "${expectedCity}" vs "${coords.display_name}"`);
-                  localStorage.removeItem(cacheKey);
-                }
-              } else {
-                localStorage.setItem(origCacheKey, JSON.stringify(coords));
-                return coords;
-              }
-            }
-          } catch (e) {
-            console.error('Erro ao ler cache:', e);
-          }
-        }
-
-        const coords = await fetchNominatim(
+        const { coords, reason } = await fetchNominatim(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&countrycodes=br`,
           expectedCity
         );
         if (coords) {
-          localStorage.setItem(cacheKey, JSON.stringify(coords));
           localStorage.setItem(origCacheKey, JSON.stringify(coords));
-          return coords;
+          return { coords, reason: null };
         }
+        if (reason) lastReason = reason;
       }
-      return null;
+
+      return { coords: null, reason: lastReason };
     }
 
     for (let i = 0; i < total; i++) {
@@ -1055,13 +1040,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. Geocode Origin Address
         if (passenger.originAddress) {
           updateProgressUI(i, total, `Geocodificando Origem de: "${passenger.name}"`);
-          const coords = await getCoordsWithFallback(passenger.originAddress, passenger.orig);
+          const { coords, reason } = await getCoordsWithFallback(passenger.originAddress, passenger.orig);
           if (coords) {
             passenger.lat_origin = coords.lat;
             passenger.lng_origin = coords.lng;
             passenger.status_origin = 'success';
+            passenger.err_origin = null;
           } else {
             passenger.status_origin = 'error';
+            passenger.err_origin = reason;
           }
         } else {
           passenger.status_origin = 'none';
@@ -1072,36 +1059,40 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Geocode Destination Address
         if (passenger.destAddress) {
           updateProgressUI(i, total, `Geocodificando Destino de: "${passenger.name}"`);
-          const coords = await getCoordsWithFallback(passenger.destAddress, passenger.dest);
+          const { coords, reason } = await getCoordsWithFallback(passenger.destAddress, passenger.dest);
           if (coords) {
             passenger.lat_dest = coords.lat;
             passenger.lng_dest = coords.lng;
             passenger.status_dest = 'success';
+            passenger.err_dest = null;
           } else {
             passenger.status_dest = 'error';
+            passenger.err_dest = reason;
           }
         } else {
           passenger.status_dest = 'none';
         }
 
-        // Aggregate overall status: Only succeed if BOTH points are successfully geocoded
+        // Aggregate overall status
         if (passenger.status_origin === 'success' && passenger.status_dest === 'success') {
           passenger.status = 'success';
         } else if (passenger.status_origin === 'success' || passenger.status_dest === 'success') {
-          passenger.status = 'partial'; // One of the two failed
+          passenger.status = 'partial';
         } else {
-          passenger.status = 'error'; // Both failed
+          passenger.status = 'error';
         }
       } else {
         // Standard Single Point Mode
         updateProgressUI(i, total, `Geocodificando: "${passenger.name}"`);
-        const coords = await getCoordsWithFallback(passenger.address, null);
+        const { coords, reason } = await getCoordsWithFallback(passenger.address, null);
         if (coords) {
           passenger.lat = coords.lat;
           passenger.lng = coords.lng;
           passenger.status = 'success';
+          passenger.err = null;
         } else {
           passenger.status = 'error';
+          passenger.err = reason;
         }
       }
 
@@ -1115,17 +1106,17 @@ document.addEventListener('DOMContentLoaded', () => {
     progressContainer.classList.add('hidden');
     dropzone.style.pointerEvents = 'auto';
     dropzone.style.opacity = '1';
-    
+
     fitMapBounds();
     updateStatsBadge();
-    
+
     // Enable VRP button if there are successfully geocoded passengers
     const successfulCount = state.passengers.filter(p => p.status === 'success' || p.status === 'cache').length;
     if (successfulCount > 0) {
       btnOptimizeRoutes.classList.remove('disabled');
       btnOptimizeRoutes.disabled = false;
     }
-    
+
     showToast('Processamento finalizado.', 'info');
   }
 
@@ -1147,8 +1138,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function buildLabel(components, nameStr) {
       const name = (nameStr || '').trim();
       const neigh = (components && components.neigh) ? components.neigh.trim() : '';
-      const city  = (components && components.city)  ? components.city.trim()  : '';
-      const sub   = [neigh, city].filter(Boolean).join(' - ');
+      const city = (components && components.city) ? components.city.trim() : '';
+      const sub = [neigh, city].filter(Boolean).join(' - ');
       return { name, sub };
     }
 
@@ -1210,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 3. Connection Polyline
     if (passenger.lat_origin !== null && passenger.lng_origin !== null &&
-        passenger.lat_dest !== null && passenger.lng_dest !== null) {
+      passenger.lat_dest !== null && passenger.lng_dest !== null) {
       const polyline = L.polyline([
         [passenger.lat_origin, passenger.lng_origin],
         [passenger.lat_dest, passenger.lng_dest]
@@ -1299,7 +1290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.currentActiveId) {
       const prevElement = document.getElementById(state.currentActiveId);
       if (prevElement) prevElement.classList.remove('active');
-      
+
       const prevLayers = state.markers[state.currentActiveId];
       if (prevLayers && Array.isArray(prevLayers)) {
         prevLayers.forEach(layer => {
@@ -1341,7 +1332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
           }
         }
-        
+
         const markerToOpen = layers.find(layer => layer instanceof L.Marker);
         if (markerToOpen) {
           markerToOpen.openPopup();
@@ -1361,8 +1352,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Geocodes a single passenger's addresses on-the-fly and updates their state, map markers, and UI card
   async function geocodePassengerSingle(passenger) {
     passenger.status = 'loading';
+
+    // Reset coordinates for the point being re-geocoded to avoid legacy markers
+    if (passenger.mode === 'route') {
+      if (passenger.status_origin === 'pending') { passenger.lat_origin = null; passenger.lng_origin = null; }
+      if (passenger.status_dest === 'pending') { passenger.lat_dest = null; passenger.lng_dest = null; }
+    } else {
+      passenger.lat = null;
+      passenger.lng = null;
+    }
+
     updatePassengerItemUI(passenger);
-    
+
     // Clear old map layers for this passenger
     const oldLayers = state.markers[passenger.id];
     if (oldLayers) {
@@ -1373,38 +1374,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       delete state.markers[passenger.id];
     }
-    
+
     if (passenger.mode === 'route') {
       // 1. Geocode Origin
       if (passenger.originAddress) {
         passenger.status_origin = 'loading';
-        const coords = await getCoordsWithFallback(passenger.originAddress, passenger.orig);
+        const { coords, reason } = await getCoordsWithFallback(passenger.originAddress, passenger.orig);
         if (coords) {
           passenger.lat_origin = coords.lat;
           passenger.lng_origin = coords.lng;
           passenger.status_origin = 'success';
+          passenger.err_origin = null;
         } else {
           passenger.status_origin = 'error';
+          passenger.err_origin = reason;
         }
       } else {
         passenger.status_origin = 'none';
       }
-      
+
       // 2. Geocode Destination
       if (passenger.destAddress) {
         passenger.status_dest = 'loading';
-        const coords = await getCoordsWithFallback(passenger.destAddress, passenger.dest);
+        const { coords, reason } = await getCoordsWithFallback(passenger.destAddress, passenger.dest);
         if (coords) {
           passenger.lat_dest = coords.lat;
           passenger.lng_dest = coords.lng;
           passenger.status_dest = 'success';
+          passenger.err_dest = null;
         } else {
           passenger.status_dest = 'error';
+          passenger.err_dest = reason;
         }
       } else {
         passenger.status_dest = 'none';
       }
-      
+
       // Aggregate status
       if (passenger.status_origin === 'success' && passenger.status_dest === 'success') {
         passenger.status = 'success';
@@ -1415,28 +1420,30 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       // Single Point
-      const coords = await getCoordsWithFallback(passenger.address, null);
+      const { coords, reason } = await getCoordsWithFallback(passenger.address, null);
       if (coords) {
         passenger.lat = coords.lat;
         passenger.lng = coords.lng;
         passenger.status = 'success';
+        passenger.err = null;
       } else {
         passenger.status = 'error';
+        passenger.err = reason;
       }
     }
-    
+
     // Render and add new markers/polyline
     addPassengerToMap(passenger);
-    
+
     // Replace old card elements in list
     const oldCard = document.getElementById(passenger.id);
     if (oldCard) {
       const newCard = createPassengerCardElement(passenger);
       oldCard.replaceWith(newCard);
     }
-    
+
     updateStatsBadge();
-    
+
     // Enable/disable VRP buttons dynamically
     const successfulCount = state.passengers.filter(p => p.status === 'success' || p.status === 'cache').length;
     if (successfulCount > 0) {
@@ -1451,10 +1458,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     applyFilters();
-    
+
     // Pan and zoom map to show newly found location(s)
     focusPassengerItem(passenger.id, true);
-    
+
     showToast(`Endereço de ${passenger.name} atualizado e geocodificado!`, 'success');
   }
 
@@ -1463,7 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   function renderPassengersList() {
     passengersList.innerHTML = '';
-    
+
     if (state.passengers.length === 0) {
       emptyState.classList.remove('hidden');
       return;
@@ -1484,7 +1491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = document.createElement('div');
     card.className = `passenger-card ${state.currentActiveId === p.id ? 'active' : ''}`;
     card.id = p.id;
-    
+
     // Status text label mapping
     let statusText = 'Pendente';
     let badgeClass = 'badge-pending';
@@ -1502,16 +1509,16 @@ document.addEventListener('DOMContentLoaded', () => {
         let dotColor = '';
         let dotTitle = '';
         if (addrStatus === 'success') { dotColor = 'var(--color-success)'; dotTitle = 'Localizado'; }
-        else if (addrStatus === 'error')  { dotColor = 'var(--color-danger)'; dotTitle = 'Não encontrado — verifique o endereço'; }
-        else if (addrStatus === 'none')   { dotColor = 'var(--text-muted)'; dotTitle = 'Não informado'; }
+        else if (addrStatus === 'error') { dotColor = 'var(--color-danger)'; dotTitle = 'Não encontrado — verifique o endereço'; }
+        else if (addrStatus === 'none') { dotColor = 'var(--text-muted)'; dotTitle = 'Não informado'; }
         return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dotColor};flex-shrink:0;margin-left:4px;" title="${dotTitle}"></span>`;
       };
 
       const origErrorHint = (p.status_origin === 'error')
-        ? `<div class="addr-error-hint"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> Endereço não localizado no mapa. Clique em <i data-lucide="edit-3" style="width:11px;height:11px;"></i> para corrigir.</div>`
+        ? `<div class="addr-error-hint"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> ${p.err_origin || 'Endereço não localizado'}.</div>`
         : '';
       const destErrorHint = (p.status_dest === 'error')
-        ? `<div class="addr-error-hint"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> Endereço não localizado no mapa. Clique em <i data-lucide="edit-3" style="width:11px;height:11px;"></i> para corrigir.</div>`
+        ? `<div class="addr-error-hint"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> ${p.err_dest || 'Endereço não localizado'}.</div>`
         : '';
 
       addressHTML = `
@@ -1529,12 +1536,16 @@ document.addEventListener('DOMContentLoaded', () => {
         ${destErrorHint}
       `;
     } else {
+      const errorHint = (p.status === 'error')
+        ? `<div class="addr-error-hint"><i data-lucide="alert-triangle" style="width:11px;height:11px;"></i> ${p.err || 'Endereço não localizado'}.</div>`
+        : '';
       addressHTML = `
         <div class="passenger-address-row" data-type="single">
           <i data-lucide="map-pin" class="address-icon"></i>
           <span class="address-text"><span class="val">${escapeHTML(p.address)}</span></span>
           <button class="btn-edit-addr" title="Editar Endereço"><i data-lucide="edit-3"></i></button>
         </div>
+        ${errorHint}
       `;
     }
 
@@ -1559,15 +1570,15 @@ document.addEventListener('DOMContentLoaded', () => {
     editBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation(); // prevent card selection
-        
+
         const row = btn.closest('.passenger-address-row');
         const type = row.dataset.type;
         const textSpan = row.querySelector('.address-text');
         const currentVal = type === 'origin' ? p.originAddress : (type === 'dest' ? p.destAddress : p.address);
-        
+
         textSpan.style.display = 'none';
         btn.style.display = 'none';
-        
+
         const editor = document.createElement('div');
         editor.className = 'address-inline-edit';
         editor.innerHTML = `
@@ -1575,22 +1586,22 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn-inline-save" title="Salvar"><i data-lucide="check"></i></button>
           <button class="btn-inline-cancel" title="Cancelar"><i data-lucide="x"></i></button>
         `;
-        
+
         row.appendChild(editor);
         lucide.createIcons();
-        
+
         const input = editor.querySelector('.address-inline-input');
         input.focus();
         input.select();
-        
+
         editor.addEventListener('click', (evt) => evt.stopPropagation());
-        
+
         const saveEdit = async () => {
           const newVal = input.value.trim();
           editor.remove();
           textSpan.style.display = '';
           btn.style.display = '';
-          
+
           if (newVal && newVal !== currentVal) {
             if (type === 'origin') {
               p.originAddress = newVal;
@@ -1604,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await geocodePassengerSingle(p);
           }
         };
-        
+
         editor.querySelector('.btn-inline-save').addEventListener('click', saveEdit);
         input.addEventListener('keydown', (evt) => {
           if (evt.key === 'Enter') saveEdit();
@@ -1614,7 +1625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.style.display = '';
           }
         });
-        
+
         editor.querySelector('.btn-inline-cancel').addEventListener('click', () => {
           editor.remove();
           textSpan.style.display = '';
@@ -1634,18 +1645,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const newCard = createPassengerCardElement(p);
     card.replaceWith(newCard);
-    
+
     // Re-apply filters so the visibility of the new card is correct
     applyFilters();
-    
+
     // Initialize Lucide icons on the new card
     lucide.createIcons();
+    updateStatsBadge();
   }
 
   // Apply combined text and status filters
   function applyFilters() {
     const query = searchInput.value.toLowerCase().trim();
-    
+
     state.passengers.forEach(p => {
       const card = document.getElementById(p.id);
       if (!card) return;
@@ -1653,12 +1665,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1. Check text query match
       let matchesText = false;
       if (p.mode === 'route') {
-        matchesText = p.name.toLowerCase().includes(query) || 
-                      (p.originAddress && p.originAddress.toLowerCase().includes(query)) ||
-                      (p.destAddress && p.destAddress.toLowerCase().includes(query));
+        matchesText = p.name.toLowerCase().includes(query) ||
+          (p.originAddress && p.originAddress.toLowerCase().includes(query)) ||
+          (p.destAddress && p.destAddress.toLowerCase().includes(query));
       } else {
-        matchesText = p.name.toLowerCase().includes(query) || 
-                      (p.address && p.address.toLowerCase().includes(query));
+        matchesText = p.name.toLowerCase().includes(query) ||
+          (p.address && p.address.toLowerCase().includes(query));
       }
 
       // 2. Check status match
@@ -1669,6 +1681,8 @@ document.addEventListener('DOMContentLoaded', () => {
         matchesStatus = (p.status === 'success' || p.status === 'cache');
       } else if (state.activeFilter === 'partial') {
         matchesStatus = (p.status === 'partial');
+      } else if (state.activeFilter === 'loading') {
+        matchesStatus = (p.status === 'loading' || p.status === 'pending');
       } else if (state.activeFilter === 'error') {
         matchesStatus = (p.status === 'error');
       }
@@ -1708,10 +1722,10 @@ document.addEventListener('DOMContentLoaded', () => {
   filterButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       if (filterGroup.classList.contains('disabled')) return;
-      
+
       filterButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      
+
       state.activeFilter = btn.dataset.filter;
       applyFilters();
     });
@@ -1743,6 +1757,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.innerHTML = `Encontrados ${total > 0 ? `(${resolved})` : ''}`;
       } else if (filter === 'partial') {
         btn.innerHTML = `Parciais ${total > 0 ? `(${partialCount})` : ''}`;
+      } else if (filter === 'loading') {
+        const loadingCount = state.passengers.filter(p => p.status === 'loading' || p.status === 'pending').length;
+        btn.innerHTML = `Processando ${total > 0 ? `(${loadingCount})` : ''}`;
       } else if (filter === 'error') {
         btn.innerHTML = `Erros ${total > 0 ? `(${errorCount})` : ''}`;
       }
@@ -1766,7 +1783,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset controls
     searchInput.value = '';
     searchInput.disabled = true;
-    
+
     // Reset filters
     filterGroup.classList.add('disabled');
     filterButtons.forEach(b => b.classList.remove('active'));
@@ -1781,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnOptimizeRoutes.classList.add('disabled');
     btnOptimizeRoutes.disabled = true;
     btnTabVehicles.disabled = true;
-    
+
     if (state.vehicleRouteLayers) {
       state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
       state.vehicleRouteLayers = [];
@@ -1852,7 +1869,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Escape HTML string utility
   function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
+    return str.replace(/[&<>'"]/g,
       tag => ({
         '&': '&amp;',
         '<': '&lt;',
@@ -1868,30 +1885,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   btnToggleTheme.addEventListener('click', () => {
     const body = document.body;
-    
+
     if (body.classList.contains('dark-theme')) {
       // Switch to Light
       body.classList.remove('dark-theme');
       body.classList.add('light-theme');
-      
+
       map.removeLayer(tiles.dark);
       tiles.light.addTo(map);
 
       themeIconLight.classList.remove('hidden');
       themeIconDark.classList.add('hidden');
-      
+
       state.theme = 'light';
     } else {
       // Switch to Dark
       body.classList.remove('light-theme');
       body.classList.add('dark-theme');
-      
+
       map.removeLayer(tiles.light);
       tiles.dark.addTo(map);
 
       themeIconLight.classList.add('hidden');
       themeIconDark.classList.remove('hidden');
-      
+
       state.theme = 'dark';
     }
 
@@ -1924,91 +1941,41 @@ document.addEventListener('DOMContentLoaded', () => {
   // --------------------------------------------------------------------------
   btnDownloadSample.addEventListener('click', () => {
     const headers = [
-      "Nome Passageiro",
-      "endereco origem",
-      "nº origem",
-      "bairro origem",
-      "municipio origem",
-      "uf origem",
-      "endereco destino",
-      "nº destino",
-      "bairro destino",
-      "municipio destino",
-      "uf destino"
+      "Indentificador", "Nome Passageiro", "Matrícula", "Telefone", "Hora",
+      "Endereço Origem", "Nº Origem", "Complemento Origem", "Bairro Origem", "Municipio Origem", "UF Origem", "CEP Origem",
+      "Endereço Destino", "Nº Destino", "Complemento Destino", "Bairro Destino", "Municipio Destino", "UF Destino", "CEP Destino",
+      "Solicitante", "Matrícula", "Centro de Custo", "Gerente", "Observação", "Motivo", "SV",
+      "Tipo de Transporte", "Data", "Hora", "Motorista"
     ];
 
     const data = [
-      {
-        "Nome Passageiro": "Carlos Silva",
-        "endereco origem": "Avenida Paulista",
-        "nº origem": "1000",
-        "bairro origem": "Bela Vista",
-        "municipio origem": "São Paulo",
-        "uf origem": "SP",
-        "endereco destino": "Avenida Atlântica",
-        "nº destino": "1702",
-        "bairro destino": "Copacabana",
-        "municipio destino": "Rio de Janeiro",
-        "uf destino": "RJ"
-      },
-      {
-        "Nome Passageiro": "Maria Oliveira",
-        "endereco origem": "Rua da Bahia",
-        "nº origem": "1022",
-        "bairro origem": "Centro",
-        "municipio origem": "Belo Horizonte",
-        "uf origem": "MG",
-        "endereco destino": "Praça da Sé",
-        "nº destino": "S/N",
-        "bairro destino": "Centro",
-        "municipio destino": "São Paulo",
-        "uf destino": "SP"
-      },
-      {
-        "Nome Passageiro": "João Santos",
-        "endereco origem": "Avenida Rebouças",
-        "nº origem": "500",
-        "bairro origem": "Pinheiros",
-        "municipio origem": "São Paulo",
-        "uf origem": "SP",
-        "endereco destino": "Avenida Brigadeiro Luís Antônio",
-        "nº destino": "2300",
-        "bairro destino": "Jardim Paulista",
-        "municipio destino": "São Paulo",
-        "uf destino": "SP"
-      },
-      {
-        "Nome Passageiro": "Ana Costa",
-        "endereco origem": "Rua das Flores",
-        "nº origem": "120",
-        "bairro origem": "Centro",
-        "municipio origem": "Curitiba",
-        "uf origem": "PR",
-        "endereco destino": "Avenida Manoel Ribas",
-        "nº destino": "2000",
-        "bairro destino": "Santa Felicidade",
-        "municipio destino": "Curitiba",
-        "uf destino": "PR"
-      }
+      headers, // Linha de cabeçalho
+      [
+        "ID001", "Carlos Silva", "12345", "(11) 98888-8888", "08:00",
+        "Avenida Paulista", "1000", "Sala 201", "Bela Vista", "São Paulo", "SP", "01310-100",
+        "Rua da Bahia", "1022", "", "Centro", "Belo Horizonte", "MG", "30160-011",
+        "Solicitante Exemplo", "54321", "CC-99", "Gerente Silva", "Obs Teste", "Visita Técnica", "SV-2024",
+        "Executivo", "27/05/2026", "17:30", "Motorista João"
+      ]
     ];
 
     try {
-      const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+      const worksheet = XLSX.utils.aoa_to_sheet(data);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Passageiros");
       const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
       const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.setAttribute('href', url);
       link.setAttribute('download', 'routefleet_modelo_passageiros.xlsx');
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       showToast('Modelo Excel baixado com sucesso!', 'success');
     } catch (err) {
       showToast('Erro ao gerar a planilha Excel de exemplo.', 'error');
@@ -2047,11 +2014,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const R = 6371; // Radius of the Earth in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
@@ -2144,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentLat = depotCoords.lat;
         let currentLng = depotCoords.lng;
         let tempGroup = [...passengerGroup];
-        
+
         while (tempGroup.length > 0) {
           let closestIdx = 0;
           let minDist = Infinity;
@@ -2166,7 +2133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         const sequenced = [];
         let tempGroup = [...passengerGroup];
-        
+
         let startIdx = 0;
         let maxDist = -1;
         for (let i = 0; i < tempGroup.length; i++) {
@@ -2177,11 +2144,11 @@ document.addEventListener('DOMContentLoaded', () => {
             startIdx = i;
           }
         }
-        
+
         let currentP = tempGroup.splice(startIdx, 1)[0];
         sequenced.push(currentP);
         let currentHome = getHomeCoords(currentP);
-        
+
         while (tempGroup.length > 0) {
           let closestIdx = 0;
           let minDist = Infinity;
@@ -2208,7 +2175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Initial Greedy CVRP grouping using farthest seed and nearest neighbor
     while (unassigned.length > 0) {
       let vehiclePassengers = [];
-      
+
       // Seed selection: farthest unassigned
       let seedIndex = 0;
       let maxDistance = -1;
@@ -2220,17 +2187,17 @@ document.addEventListener('DOMContentLoaded', () => {
           seedIndex = i;
         }
       }
-      
+
       const seed = unassigned.splice(seedIndex, 1)[0];
       vehiclePassengers.push(seed);
-      
+
       // Nearest neighbor grouping up to 4
       while (vehiclePassengers.length < 4 && unassigned.length > 0) {
         const lastPassenger = vehiclePassengers[vehiclePassengers.length - 1];
         const lastHome = getHomeCoords(lastPassenger);
         let closestIndex = 0;
         let minDistance = Infinity;
-        
+
         for (let i = 0; i < unassigned.length; i++) {
           const nextHome = getHomeCoords(unassigned[i]);
           const dist = calculateDistance(lastHome.lat, lastHome.lng, nextHome.lat, nextHome.lng);
@@ -2239,11 +2206,11 @@ document.addEventListener('DOMContentLoaded', () => {
             closestIndex = i;
           }
         }
-        
+
         const nextPassenger = unassigned.splice(closestIndex, 1)[0];
         vehiclePassengers.push(nextPassenger);
       }
-      
+
       // Sequence the initial vehicle group
       const sequencedGroup = sequenceRoute(vehiclePassengers, depot, isDropOff);
       const dist = calculateRouteDistance(sequencedGroup, depot, isDropOff);
@@ -2255,55 +2222,55 @@ document.addEventListener('DOMContentLoaded', () => {
         depot: depot,
         distance: parseFloat(dist.toFixed(1))
       });
-      
+
       vehicleIdCounter++;
     }
-    
+
     // 2. Global Route Optimization Refinement (Local Search Swapping / 2-Opt)
     // Iterates through all vehicles and tries to swap passenger assignments to globally minimize total routing distance.
     let improved = true;
     let iterationLimit = 150; // Safety cap
-    
+
     while (improved && iterationLimit > 0) {
       improved = false;
       iterationLimit--;
-      
+
       for (let i = 0; i < vehicles.length; i++) {
         for (let j = i + 1; j < vehicles.length; j++) {
           const v1 = vehicles[i];
           const v2 = vehicles[j];
-          
+
           for (let p1Idx = 0; p1Idx < v1.passengers.length; p1Idx++) {
             for (let p2Idx = 0; p2Idx < v2.passengers.length; p2Idx++) {
               const p1 = v1.passengers[p1Idx];
               const p2 = v2.passengers[p2Idx];
-              
+
               const currentV1Dist = v1.distance;
               const currentV2Dist = v2.distance;
               const currentTotal = currentV1Dist + currentV2Dist;
-              
+
               // Simulate passenger swap
               const newV1Passengers = [...v1.passengers];
               const newV2Passengers = [...v2.passengers];
               newV1Passengers[p1Idx] = p2;
               newV2Passengers[p2Idx] = p1;
-              
+
               // Re-sequence the simulated vehicles to find their optimal paths
               const seqV1 = sequenceRoute(newV1Passengers, depot, isDropOff);
               const seqV2 = sequenceRoute(newV2Passengers, depot, isDropOff);
-              
+
               const swappedV1Dist = calculateRouteDistance(seqV1, depot, isDropOff);
               const swappedV2Dist = calculateRouteDistance(seqV2, depot, isDropOff);
               const swappedTotal = swappedV1Dist + swappedV2Dist;
-              
+
               // If the swap improves total routing efficiency by more than 0.05km, commit!
               if (swappedTotal < currentTotal - 0.05) {
                 v1.passengers = seqV1;
                 v1.distance = parseFloat(swappedV1Dist.toFixed(1));
-                
+
                 v2.passengers = seqV2;
                 v2.distance = parseFloat(swappedV2Dist.toFixed(1));
-                
+
                 improved = true;
                 break;
               }
@@ -2315,7 +2282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (improved) break;
       }
     }
-    
+
     state.vehicles = vehicles;
     showToast(`Logística gerada! ${vehicles.length} veículo(s) otimizado(s) criado(s).`, 'success');
   }
@@ -2369,7 +2336,7 @@ document.addEventListener('DOMContentLoaded', () => {
     state.vehicles.forEach(vehicle => {
       const occupancy = vehicle.passengers.length;
       const isOverflow = occupancy > MAX_CAPACITY;
-      const isFull    = occupancy === MAX_CAPACITY;
+      const isFull = occupancy === MAX_CAPACITY;
 
       const card = document.createElement('div');
       card.className = `vehicle-card ${state.currentActiveId === vehicle.id ? 'active' : ''} ${isOverflow ? 'vehicle-overflow' : ''}`;
@@ -2433,7 +2400,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Drag start
         chip.addEventListener('dragstart', (e) => {
-          dragPassengerId   = p.id;
+          dragPassengerId = p.id;
           dragSourceVehicleId = vehicle.id;
           chip.classList.add('dragging');
           e.dataTransfer.effectAllowed = 'move';
@@ -2478,7 +2445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Re-number vehicle names
         state.vehicles.forEach((v, i) => { v.name = `Veículo ${i + 1}`; });
 
-        dragPassengerId     = null;
+        dragPassengerId = null;
         dragSourceVehicleId = null;
         rebuildAll();
       });
@@ -2558,7 +2525,7 @@ document.addEventListener('DOMContentLoaded', () => {
         distance: 0,
         duration: 0
       });
-      
+
       rebuildAll();
       focusVehicleItem(newId);
       showToast('Novo veículo adicionado com sucesso!', 'success');
@@ -2614,7 +2581,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook  = XLSX.utils.book_new();
+      const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Roteirização');
 
       // Column widths
@@ -2625,11 +2592,11 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
 
       const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-      const blob   = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url    = URL.createObjectURL(blob);
-      const link   = document.createElement('a');
-      link.href    = url;
-      link.download = `routefleet_roteirizacao_${new Date().toISOString().slice(0,10)}.xlsx`;
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `routefleet_roteirizacao_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -2648,31 +2615,31 @@ document.addEventListener('DOMContentLoaded', () => {
       const prevElement = document.getElementById(state.currentActiveId);
       if (prevElement) prevElement.classList.remove('active');
     }
-    
+
     state.currentActiveId = id;
     const element = document.getElementById(id);
     if (element) {
       element.classList.add('active');
       element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-    
+
     const vehicle = state.vehicles.find(v => v.id === id);
     if (vehicle) {
       drawVehicleRouteOnMap(vehicle);
     }
   }
 
-    // Draw customized high-contrast routes and sequential markers on the map
+  // Draw customized high-contrast routes and sequential markers on the map
   async function drawVehicleRouteOnMap(vehicle) {
     // Clear any previous vehicle route layers
     state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
     state.vehicleRouteLayers = [];
-    
+
     map.closePopup();
-    
+
     const points = [];
     const isDropOff = vehicle.depot.type === 'origin';
-    
+
     // 1. Draw Depot Marker
     const depotMarker = L.marker([vehicle.depot.lat, vehicle.depot.lng], {
       icon: L.divIcon({
@@ -2702,16 +2669,16 @@ document.addEventListener('DOMContentLoaded', () => {
     depotMarker.bindPopup(`<strong>Ponto de ${isDropOff ? 'Retirada (Origem)' : 'Entrega (Destino)'}</strong><br>${vehicle.depot.address}`);
     depotMarker.addTo(map);
     state.vehicleRouteLayers.push(depotMarker);
-    
+
     if (isDropOff) {
       // Retirada: Depot -> stops
       points.push([vehicle.depot.lat, vehicle.depot.lng]);
-      
+
       vehicle.passengers.forEach((p, idx) => {
         if (p.lat_dest !== null && p.lng_dest !== null) {
           const destLatLng = [p.lat_dest, p.lng_dest];
           points.push(destLatLng);
-          
+
           const seqMarker = L.marker(destLatLng, {
             icon: L.divIcon({
               className: 'custom-map-marker',
@@ -2737,7 +2704,7 @@ document.addEventListener('DOMContentLoaded', () => {
               iconAnchor: [12, 12]
             })
           });
-          
+
           seqMarker.bindPopup(`
             <strong>${idx + 1}ª Parada (Desembarque) | ${p.name}</strong><br>
             <span style="font-size: 11px; color: var(--text-secondary);">${p.destAddress}</span>
@@ -2752,7 +2719,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (p.lat_origin !== null && p.lng_origin !== null) {
           const origLatLng = [p.lat_origin, p.lng_origin];
           points.push(origLatLng);
-          
+
           const seqMarker = L.marker(origLatLng, {
             icon: L.divIcon({
               className: 'custom-map-marker',
@@ -2778,7 +2745,7 @@ document.addEventListener('DOMContentLoaded', () => {
               iconAnchor: [12, 12]
             })
           });
-          
+
           seqMarker.bindPopup(`
             <strong>${idx + 1}ª Parada (Embarque) | ${p.name}</strong><br>
             <span style="font-size: 11px; color: var(--text-secondary);">${p.originAddress}</span>
@@ -2787,12 +2754,12 @@ document.addEventListener('DOMContentLoaded', () => {
           state.vehicleRouteLayers.push(seqMarker);
         }
       });
-      
+
       points.push([vehicle.depot.lat, vehicle.depot.lng]);
     }
 
     // 3. One-way route ends at the last passenger's destination (no return to depot)
-    
+
     // 4. Draw fallback straight-line polyline (dashed)
     let fallbackPolyline = null;
     if (points.length >= 2) {
@@ -2803,7 +2770,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dashArray: '6, 8'
       }).addTo(map);
       state.vehicleRouteLayers.push(fallbackPolyline);
-      
+
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds.pad(0.2), {
         animate: true,
@@ -2815,19 +2782,19 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const osrmCoords = points.map(p => `${p[1]},${p[0]}`).join(';');
       const response = await fetch(`https://router.project-osrm.org/route/v1/driving/${osrmCoords}?overview=full&geometries=geojson`);
-      
+
       if (response.ok) {
         const data = await response.json();
         if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
           const route = data.routes[0];
           const roadPoints = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-          
+
           // Remove the fallback line
           if (fallbackPolyline) {
             map.removeLayer(fallbackPolyline);
             state.vehicleRouteLayers = state.vehicleRouteLayers.filter(l => l !== fallbackPolyline);
           }
-          
+
           // Double-layer polyline for a stunning high-contrast GPS look (dark border shadow + accent color line)
           const shadowPolyline = L.polyline(roadPoints, {
             color: '#000000',
@@ -2890,7 +2857,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Clear any vehicle route layers currently drawn
     state.vehicleRouteLayers.forEach(layer => map.removeLayer(layer));
     state.vehicleRouteLayers = [];
-    
+
     state.passengers.forEach(p => {
       const m = state.markers[p.id];
       if (m) {
@@ -2901,19 +2868,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-    
+
     fitMapBounds();
   }
 
   // Handle Tab Switch Actions
   function switchTab(tab) {
     tabButtons.forEach(b => b.classList.remove('active'));
-    
+
     const activeBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
     if (activeBtn) activeBtn.classList.add('active');
-    
+
     state.activeTab = tab;
-    
+
     if (tab === 'passengers') {
       passengersTabContent.classList.remove('hidden');
       vehiclesTabContent.classList.add('hidden');
@@ -2938,11 +2905,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Optimize button click trigger
   btnOptimizeRoutes.addEventListener('click', () => {
     if (btnOptimizeRoutes.classList.contains('disabled')) return;
-    
+
     optimizeVehiclesLogistics();
     btnTabVehicles.disabled = false;
     switchTab('vehicles');
-    
+
     if (state.vehicles.length > 0) {
       focusVehicleItem(state.vehicles[0].id);
     }
